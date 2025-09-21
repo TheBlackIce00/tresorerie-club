@@ -372,6 +372,7 @@
                             <option value="Subventions">Subventions</option>
                             <option value="Événements">Événements</option>
                             <option value="Équipement">Équipement</option>
+                            <option value="Équipement">Fourniture Bureau</option>
                             <option value="Local">Local</option>
                             <option value="Transport">Transport</option>
                             <option value="Autres">Autres</option>
@@ -470,9 +471,9 @@
         function updateDashboard() {
             var stats = calculateStats();
             
-            document.getElementById('soldeActuel').textContent = stats.solde.toFixed(2) + ' €';
-            document.getElementById('totalRecettes').textContent = stats.totalRecettes.toFixed(2) + ' €';
-            document.getElementById('totalDepenses').textContent = stats.totalDepenses.toFixed(2) + ' €';
+            document.getElementById('soldeActuel').textContent = stats.solde.toFixed(2) + ' dt';
+            document.getElementById('totalRecettes').textContent = stats.totalRecettes.toFixed(2) + ' dt';
+            document.getElementById('totalDepenses').textContent = stats.totalDepenses.toFixed(2) + ' dt';
             
             var container = document.getElementById('dernieresTransactions');
             var recentTransactions = transactions.slice(-5).reverse();
@@ -486,7 +487,7 @@
                     '<div class="transaction-meta">' + t.categorie + ' • ' + t.date + '</div>' +
                     '</div>' +
                     '<div class="transaction-amount ' + (t.type === 'recette' ? 'amount-positive' : 'amount-negative') + '">' +
-                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €' +
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' dt' +
                     '</div>' +
                     '</div>';
             }
@@ -508,7 +509,7 @@
                     '</div>' +
                     '<div style="display: flex; align-items: center;">' +
                     '<div class="transaction-amount ' + (t.type === 'recette' ? 'amount-positive' : 'amount-negative') + '">' +
-                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €' +
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' dt' +
                     '</div>' +
                     '<button class="delete-btn" onclick="deleteTransaction(' + t.id + ')" title="Supprimer">×</button>' +
                     '</div>' +
@@ -545,11 +546,11 @@
                         '<div class="transaction-info">' +
                         '<h4>' + cat + '</h4>' +
                         '<div class="transaction-meta">' +
-                        'Recettes: ' + recettes.toFixed(2) + ' € | Dépenses: ' + depenses.toFixed(2) + ' €' +
+                        'Recettes: ' + recettes.toFixed(2) + ' dt | Dépenses: ' + depenses.toFixed(2) + ' dt' +
                         '</div>' +
                         '</div>' +
                         '<div class="transaction-amount ' + (solde >= 0 ? 'amount-positive' : 'amount-negative') + '">' +
-                        'Solde: ' + solde.toFixed(2) + ' €' +
+                        'Solde: ' + solde.toFixed(2) + ' dt' +
                         '</div>' +
                         '</div>';
                 }
@@ -580,16 +581,16 @@
                 '=====================\n\n' +
                 'RÉSUMÉ\n' +
                 '------\n' +
-                'Solde actuel: ' + stats.solde.toFixed(2) + ' €\n' +
-                'Total recettes: ' + stats.totalRecettes.toFixed(2) + ' €\n' +
-                'Total dépenses: ' + stats.totalDepenses.toFixed(2) + ' €\n\n' +
+                'Solde actuel: ' + stats.solde.toFixed(2) + ' dt\n' +
+                'Total recettes: ' + stats.totalRecettes.toFixed(2) + ' dt\n' +
+                'Total dépenses: ' + stats.totalDepenses.toFixed(2) + ' dt\n\n' +
                 'TRANSACTIONS\n' +
                 '-----------\n';
             
             for (var i = 0; i < transactions.length; i++) {
                 var t = transactions[i];
                 content += t.date + ' | ' + t.type.toUpperCase() + ' | ' + t.description + ' | ' + t.categorie + ' | ' +
-                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €\n';
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' dt\n';
             }
             
             var blob = new Blob([content], { type: 'text/plain' });
