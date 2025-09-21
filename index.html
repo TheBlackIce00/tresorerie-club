@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trésorerie Club</title>
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Trésorerie Club">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .install-banner {
+            background: #10b981;
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            justify-content: center;
+            min-width: 120px;
+        }
+
+        .tab.active {
+            background: #2563eb;
+            color: white;
+        }
+
+        .tab:hover:not(.active) {
+            background: #f3f4f6;
+        }
+
+        .card {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .stat-card.positive {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+        }
+
+        .stat-card.negative {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+        }
+
+        .stat-card.neutral {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .transaction-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .transaction-item:hover {
+            background: #f9fafb;
+        }
+
+        .transaction-info h4 {
+            margin-bottom: 0.25rem;
+            font-size: 1rem;
+        }
+
+        .transaction-meta {
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .transaction-amount {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .amount-positive {
+            color: #10b981;
+        }
+
+        .amount-negative {
+            color: #ef4444;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 2rem;
+            height: 2rem;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stat-value {
+                font-size: 1.5rem;
+            }
+            
+            .transaction-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+            
+            .transaction-amount {
+                text-align: left;
+                align-self: flex-end;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-banner" id="installBanner">
+        📱 Installer cette app sur votre appareil - Cliquez ici !
+    </div>
+    
+    <div class="header">
+        <h1>💰 Trésorerie Club</h1>
+        <p>Gestion financière complète</p>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('dashboard')">
+                📊 Tableau de bord
+            </button>
+            <button class="tab" onclick="showTab('transactions')">
+                💳 Transactions
+            </button>
+            <button class="tab" onclick="showTab('reports')">
+                📈 Rapports
+            </button>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content">
+            <div class="stats-grid">
+                <div class="stat-card positive">
+                    <div>
+                        <div>Solde Actuel</div>
+                        <div class="stat-value" id="soldeActuel">0.00 €</div>
+                    </div>
+                    <div style="font-size: 2rem;">💰</div>
+                </div>
+                <div class="stat-card neutral">
+                    <div>
+                        <div>Total Recettes</div>
+                        <div class="stat-value" id="totalRecettes">0.00 €</div>
+                    </div>
+                    <div style="font-size: 2rem;">📈</div>
+                </div>
+                <div class="stat-card negative">
+                    <div>
+                        <div>Total Dépenses</div>
+                        <div class="stat-value" id="totalDepenses">0.00 €</div>
+                    </div>
+                    <div style="font-size: 2rem;">📉</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Dernières Transactions</h3>
+                <div id="dernieresTransactions"></div>
+            </div>
+        </div>
+
+        <!-- Transactions Tab -->
+        <div id="transactions" class="tab-content hidden">
+            <div class="card">
+                <h3>Ajouter une Transaction</h3>
+                <form id="transactionForm">
+                    <div class="form-grid">
+                        <select id="type" class="form-control" required>
+                            <option value="recette">💰 Recette</option>
+                            <option value="depense">💸 Dépense</option>
+                        </select>
+                        <input type="text" id="description" class="form-control" placeholder="Description" required>
+                        <input type="number" id="montant" class="form-control" placeholder="Montant (€)" step="0.01" required>
+                        <select id="categorie" class="form-control" required>
+                            <option value="">Sélectionner catégorie</option>
+                            <option value="Cotisations">Cotisations</option>
+                            <option value="Subventions">Subventions</option>
+                            <option value="Événements">Événements</option>
+                            <option value="Équipement">Équipement</option>
+                            <option value="Local">Local</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Autres">Autres</option>
+                        </select>
+                        <input type="date" id="date" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        ➕ Ajouter Transaction
+                    </button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Toutes les Transactions</h3>
+                <div class="transaction-list" id="toutesTransactions"></div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content hidden">
+            <div class="card">
+                <h3>Rapport par Catégorie</h3>
+                <div id="rapportCategories"></div>
+            </div>
+            
+            <div class="card">
+                <h3>Actions</h3>
+                <button class="btn btn-success" onclick="exportReport()">
+                    📥 Télécharger Rapport
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        var transactions = [];
+        var deferredPrompt;
+
+        // Initialiser les données
+        function initData() {
+            var saved = localStorage.getItem('transactions');
+            if (saved) {
+                transactions = JSON.parse(saved);
+            } else {
+                transactions = [
+                    { id: 1, date: '2025-09-15', type: 'recette', description: 'Cotisation membre', montant: 50, categorie: 'Cotisations' },
+                    { id: 2, date: '2025-09-18', type: 'depense', description: 'Matériel sport', montant: 120, categorie: 'Équipement' },
+                    { id: 3, date: '2025-09-20', type: 'recette', description: 'Subvention mairie', montant: 500, categorie: 'Subventions' }
+                ];
+                saveToStorage();
+            }
+        }
+
+        // Sauvegarder dans le stockage
+        function saveToStorage() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+        }
+
+        // Afficher une alerte
+        function showAlert(message, type) {
+            var alertContainer = document.getElementById('alert-container');
+            var alert = document.createElement('div');
+            alert.className = 'alert alert-' + (type || 'success');
+            alert.textContent = message;
+            alertContainer.appendChild(alert);
+            
+            setTimeout(function() {
+                if (alert.parentNode) {
+                    alert.parentNode.removeChild(alert);
+                }
+            }, 3000);
+        }
+
+        // Calculer les statistiques
+        function calculateStats() {
+            var totalRecettes = 0;
+            var totalDepenses = 0;
+            
+            for (var i = 0; i < transactions.length; i++) {
+                if (transactions[i].type === 'recette') {
+                    totalRecettes += transactions[i].montant;
+                } else {
+                    totalDepenses += transactions[i].montant;
+                }
+            }
+            
+            return {
+                solde: totalRecettes - totalDepenses,
+                totalRecettes: totalRecettes,
+                totalDepenses: totalDepenses
+            };
+        }
+
+        // Mettre à jour le tableau de bord
+        function updateDashboard() {
+            var stats = calculateStats();
+            
+            document.getElementById('soldeActuel').textContent = stats.solde.toFixed(2) + ' €';
+            document.getElementById('totalRecettes').textContent = stats.totalRecettes.toFixed(2) + ' €';
+            document.getElementById('totalDepenses').textContent = stats.totalDepenses.toFixed(2) + ' €';
+            
+            var container = document.getElementById('dernieresTransactions');
+            var recentTransactions = transactions.slice(-5).reverse();
+            var html = '';
+            
+            for (var i = 0; i < recentTransactions.length; i++) {
+                var t = recentTransactions[i];
+                html += '<div class="transaction-item">' +
+                    '<div class="transaction-info">' +
+                    '<h4>' + t.description + '</h4>' +
+                    '<div class="transaction-meta">' + t.categorie + ' • ' + t.date + '</div>' +
+                    '</div>' +
+                    '<div class="transaction-amount ' + (t.type === 'recette' ? 'amount-positive' : 'amount-negative') + '">' +
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €' +
+                    '</div>' +
+                    '</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Mettre à jour la liste des transactions
+        function updateTransactionsList() {
+            var container = document.getElementById('toutesTransactions');
+            var html = '';
+            
+            for (var i = 0; i < transactions.length; i++) {
+                var t = transactions[i];
+                html += '<div class="transaction-item">' +
+                    '<div class="transaction-info">' +
+                    '<h4>' + t.description + '</h4>' +
+                    '<div class="transaction-meta">' + t.categorie + ' • ' + t.date + '</div>' +
+                    '</div>' +
+                    '<div style="display: flex; align-items: center;">' +
+                    '<div class="transaction-amount ' + (t.type === 'recette' ? 'amount-positive' : 'amount-negative') + '">' +
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €' +
+                    '</div>' +
+                    '<button class="delete-btn" onclick="deleteTransaction(' + t.id + ')" title="Supprimer">×</button>' +
+                    '</div>' +
+                    '</div>';
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Mettre à jour les rapports
+        function updateReports() {
+            var categories = ['Cotisations', 'Subventions', 'Événements', 'Équipement', 'Local', 'Transport', 'Autres'];
+            var container = document.getElementById('rapportCategories');
+            var html = '';
+            
+            for (var c = 0; c < categories.length; c++) {
+                var cat = categories[c];
+                var recettes = 0;
+                var depenses = 0;
+                
+                for (var i = 0; i < transactions.length; i++) {
+                    if (transactions[i].categorie === cat) {
+                        if (transactions[i].type === 'recette') {
+                            recettes += transactions[i].montant;
+                        } else {
+                            depenses += transactions[i].montant;
+                        }
+                    }
+                }
+                
+                if (recettes > 0 || depenses > 0) {
+                    var solde = recettes - depenses;
+                    html += '<div class="transaction-item">' +
+                        '<div class="transaction-info">' +
+                        '<h4>' + cat + '</h4>' +
+                        '<div class="transaction-meta">' +
+                        'Recettes: ' + recettes.toFixed(2) + ' € | Dépenses: ' + depenses.toFixed(2) + ' €' +
+                        '</div>' +
+                        '</div>' +
+                        '<div class="transaction-amount ' + (solde >= 0 ? 'amount-positive' : 'amount-negative') + '">' +
+                        'Solde: ' + solde.toFixed(2) + ' €' +
+                        '</div>' +
+                        '</div>';
+                }
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Supprimer une transaction
+        function deleteTransaction(id) {
+            if (confirm('Voulez-vous vraiment supprimer cette transaction ?')) {
+                for (var i = 0; i < transactions.length; i++) {
+                    if (transactions[i].id === id) {
+                        transactions.splice(i, 1);
+                        break;
+                    }
+                }
+                saveToStorage();
+                updateAll();
+                showAlert('Transaction supprimée', 'success');
+            }
+        }
+
+        // Exporter le rapport
+        function exportReport() {
+            var stats = calculateStats();
+            var content = 'RAPPORT FINANCIER CLUB\n' +
+                '=====================\n\n' +
+                'RÉSUMÉ\n' +
+                '------\n' +
+                'Solde actuel: ' + stats.solde.toFixed(2) + ' €\n' +
+                'Total recettes: ' + stats.totalRecettes.toFixed(2) + ' €\n' +
+                'Total dépenses: ' + stats.totalDepenses.toFixed(2) + ' €\n\n' +
+                'TRANSACTIONS\n' +
+                '-----------\n';
+            
+            for (var i = 0; i < transactions.length; i++) {
+                var t = transactions[i];
+                content += t.date + ' | ' + t.type.toUpperCase() + ' | ' + t.description + ' | ' + t.categorie + ' | ' +
+                    (t.type === 'recette' ? '+' : '-') + t.montant.toFixed(2) + ' €\n';
+            }
+            
+            var blob = new Blob([content], { type: 'text/plain' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'rapport-tresorerie-' + new Date().toISOString().split('T')[0] + '.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showAlert('Rapport téléchargé !', 'success');
+        }
+
+        // Mettre à jour tout
+        function updateAll() {
+            updateDashboard();
+            updateTransactionsList();
+            updateReports();
+        }
+
+        // Changer d'onglet
+        function showTab(tabName) {
+            var tabs = document.querySelectorAll('.tab');
+            var contents = document.querySelectorAll('.tab-content');
+            
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            for (var i = 0; i < contents.length; i++) {
+                contents[i].classList.add('hidden');
+            }
+            
+            document.querySelector('[onclick="showTab(\'' + tabName + '\')"]').classList.add('active');
+            document.getElementById(tabName).classList.remove('hidden');
+        }
+
+        // Initialisation
+        function init() {
+            initData();
+            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            updateAll();
+            
+            // Gestion du formulaire
+            document.getElementById('transactionForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                var transaction = {
+                    id: Date.now(),
+                    type: document.getElementById('type').value,
+                    description: document.getElementById('description').value.trim(),
+                    montant: parseFloat(document.getElementById('montant').value),
+                    categorie: document.getElementById('categorie').value,
+                    date: document.getElementById('date').value
+                };
+                
+                if (transaction.description && transaction.montant && transaction.categorie && transaction.date) {
+                    transactions.push(transaction);
+                    saveToStorage();
+                    updateAll();
+                    document.getElementById('transactionForm').reset();
+                    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                    showAlert('Transaction ajoutée avec succès !', 'success');
+                } else {
+                    showAlert('Veuillez remplir tous les champs', 'error');
+                }
+            });
+        }
+
+        // Démarrer l'app
+        window.onload = init;
+    </script>
+</body>
+</html>
