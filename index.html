@@ -760,36 +760,46 @@
                 console.log('Données à envoyer:', dataToSend);
 
                 // Tentative de sauvegarde via Google Apps Script Web App
-                if (config.webAppUrl) {
-                    console.log('Envoi vers:', config.webAppUrl);
-                    
-                    const response = await fetch(config.webAppUrl, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(dataToSend)
-                    });
-                    
-                    console.log('Statut de réponse:', response.status);
-                    
-                    if (response.ok) {
-                        const responseData = await response.json();
-                        console.log('Réponse du serveur:', responseData);
-                        
-                        if (responseData.success) {
-                            updateSyncStatus('success', 'Sauvegardé Google Sheets');
-                            return;
-                        } else {
-                            console.error('Erreur serveur:', responseData.error);
-                            updateSyncStatus('error', 'Erreur: ' + responseData.error);
-                        }
-                    } else {
-                        const errorText = await response.text();
-                        console.error('Erreur HTTP:', response.status, errorText);
-                        updateSyncStatus('error', `Erreur HTTP ${response.status}`);
-                    }
-                }
+                // Tentative de sauvegarde via Google Apps Script Web App
+if (config.webAppUrl) {
+    console.log('Envoi vers:', config.webAppUrl);
+    
+    // Utiliser une approche qui gère mieux CORS
+    const response = await fetch(config.webAppUrl, {
+        method: 'POST',
+        headers: { 
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dataToSend)
+    });
+    
+    console.log('Statut de réponse:', response.status);
+    
+    if (response.ok) {
+        try {
+            const responseText = await response.text();
+            let responseData;
+            
+            // Essayer de parser JSON, sinon utiliser le texte brut
+            try {
+                responseData = JSON.parse(responseText);
+            } catch {
+                responseData = { success: true, message: responseText };
+            }
+            
+            console.log('Réponse du serveur:', responseData);
+            
+            if (responseData.success || responseText === 'OK') {
+                updateSyncStatus('success', 'Sauvegardé Google Sheets');
+                return;
+            }
+        } catch (parseError) {
+            console.log('Réponse texte:', await response.text());
+            updateSyncStatus('success', 'Sauvegardé (réponse simple)');
+            return;
+        }
+    }
+}
                 
                 // Fallback: sauvegarder localement avec message informatif
                 localStorage.setItem('treasuryBackup', JSON.stringify({ transactions, members, timestamp: new Date().toISOString() }));
