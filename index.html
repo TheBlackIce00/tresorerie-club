@@ -388,6 +388,8 @@
                 <input type="text" class="admin-input" id="apiKey" placeholder="Clé API Firebase">
                 <input type="password" class="admin-input" id="adminPassword" placeholder="Mot de passe admin">
                 <button onclick="saveFirebaseConfig()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Connecter Firebase</button>
+                <button onclick="exportTransactionsPDF()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">📋 Export PDF</button>
+                <button onclick="showFirebaseStatus()" style="padding: 5px; font-size: 10px; background: #17a2b8; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">📊 Statut Firebase</button>
             </div>
         </div>
 
@@ -530,7 +532,7 @@
     </div>
 
     <script>
-        // Configuration Firebase
+        // Configuration Firebase avec validation
         let firebaseConfig = {};
         let db;
         let isFirebaseConnected = false;
@@ -546,27 +548,66 @@
                 try {
                     firebaseConfig = JSON.parse(saved);
                     
-                    // Initialiser Firebase
-                    firebase.initializeApp(firebaseConfig);
+                    // Vérifier si Firebase est déjà initialisé
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    
                     db = firebase.firestore();
                     isFirebaseConnected = true;
                     
                     updateSyncStatus('success', 'Firebase connecté');
                     loadDataFromFirebase();
                     
+                    // Remplir les champs de configuration
+                    document.getElementById('projectId').value = firebaseConfig.projectId;
+                    document.getElementById('apiKey').value = firebaseConfig.apiKey;
+                    
                 } catch (error) {
                     console.error('Erreur Firebase:', error);
-                    updateSyncStatus('error', 'Erreur Firebase');
+                    updateSyncStatus('error', 'Erreur Firebase: ' + error.message);
+                    loadLocalData(); // Fallback vers données locales
                 }
             } else {
                 updateSyncStatus('error', 'Firebase non configuré');
+                loadLocalData(); // Charger données locales si pas de Firebase
             }
         }
 
-        // Configuration Firebase
+        // Chargement des données locales en fallback
+        function loadLocalData() {
+            const saved = localStorage.getItem('treasuryData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.transactions) transactions = data.transactions;
+                    if (data.members) members = data.members;
+                    updateUI();
+                    updateSyncStatus('success', 'Données locales chargées');
+                } catch (error) {
+                    console.error('Erreur chargement local:', error);
+                }
+            }
+        }
+
+        // Sauvegarde locale en fallback
+        function saveLocalData() {
+            try {
+                const data = {
+                    transactions,
+                    members,
+                    timestamp: new Date().toISOString()
+                };
+                localStorage.setItem('treasuryData', JSON.stringify(data));
+            } catch (error) {
+                console.error('Erreur sauvegarde locale:', error);
+            }
+        }
+
+        // Configuration Firebase améliorée
         function saveFirebaseConfig() {
-            const projectId = document.getElementById('projectId').value;
-            const apiKey = document.getElementById('apiKey').value;
+            const projectId = document.getElementById('projectId').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
             const password = document.getElementById('adminPassword').value;
             
             if (password !== 'admin123') {
@@ -575,7 +616,13 @@
             }
             
             if (!projectId || !apiKey) {
-                alert('Veuillez remplir tous les champs');
+                alert('Veuillez remplir le Project ID et l\'API Key');
+                return;
+            }
+            
+            // Validation basique des formats
+            if (!projectId.match(/^[a-z0-9-]+$/)) {
+                alert('Project ID invalide (doit contenir uniquement des lettres minuscules, chiffres et tirets)');
                 return;
             }
             
@@ -591,70 +638,227 @@
             localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
             
             try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                isFirebaseConnected = true;
+                // Réinitialiser Firebase si déjà configuré
+                if (firebase.apps.length > 0) {
+                    firebase.app().delete().then(() => {
+                        firebase.initializeApp(firebaseConfig);
+                        db = firebase.firestore();
+                        isFirebaseConnected = true;
+                        testFirebaseConnection();
+                    });
+                } else {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    isFirebaseConnected = true;
+                    testFirebaseConnection();
+                }
                 
-                updateSyncStatus('success', 'Firebase configuré');
-                loadDataFromFirebase();
                 toggleAdminPanel();
                 
             } catch (error) {
                 console.error('Erreur configuration Firebase:', error);
-                updateSyncStatus('error', 'Erreur configuration');
+                updateSyncStatus('error', 'Erreur: ' + error.message);
+                alert('Erreur de configuration Firebase: ' + error.message);
             }
         }
 
-        // Charger données depuis Firebase
+        // Test de connexion Firebase
+        async function testFirebaseConnection() {
+            updateSyncStatus('loading', 'Test connexion...');
+            
+            try {
+                // Tenter d'écrire un document de test
+                await db.collection('test').doc('connection').set({
+                    test: true,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Supprimer le document de test
+                await db.collection('test').doc('connection').delete();
+                
+                updateSyncStatus('success', 'Firebase connecté et testé');
+                loadDataFromFirebase();
+                
+            } catch (error) {
+                console.error('Test connexion échoué:', error);
+                updateSyncStatus('error', 'Test échoué: ' + error.message);
+                isFirebaseConnected = false;
+            }
+        }
+
+        // Charger données depuis Firebase avec retry
         async function loadDataFromFirebase() {
-            if (!isFirebaseConnected) return;
+            if (!isFirebaseConnected) {
+                loadLocalData();
+                return;
+            }
             
             updateSyncStatus('loading', 'Chargement...');
             
-            try {
-                // Charger transactions
-                const transactionsRef = await db.collection('transactions').orderBy('timestamp', 'desc').get();
-                transactions = transactionsRef.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                // Charger membres
-                const membersRef = await db.collection('members').get();
-                members = membersRef.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                
-                updateUI();
-                updateSyncStatus('success', 'Synchronisé');
-                
-            } catch (error) {
-                console.error('Erreur chargement:', error);
-                updateSyncStatus('error', 'Erreur chargement');
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            while (retryCount < maxRetries) {
+                try {
+                    // Charger transactions avec gestion d'erreur
+                    const transactionsSnapshot = await db.collection('transactions')
+                        .orderBy('timestamp', 'desc')
+                        .limit(100)
+                        .get();
+                    
+                    transactions = transactionsSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        // Convertir Timestamp en string si nécessaire
+                        date: doc.data().date || new Date().toISOString().split('T')[0],
+                        timestamp: doc.data().timestamp || new Date()
+                    }));
+                    
+                    // Charger membres avec gestion d'erreur
+                    const membersSnapshot = await db.collection('members')
+                        .limit(100)
+                        .get();
+                    
+                    members = membersSnapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    
+                    // Sauvegarder localement comme backup
+                    saveLocalData();
+                    
+                    updateUI();
+                    updateSyncStatus('success', `Synchronisé (${transactions.length} transactions, ${members.length} membres)`);
+                    return;
+                    
+                } catch (error) {
+                    retryCount++;
+                    console.error(`Erreur chargement (tentative ${retryCount}):`, error);
+                    
+                    if (retryCount < maxRetries) {
+                        updateSyncStatus('loading', `Retry ${retryCount}/${maxRetries}...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                    } else {
+                        updateSyncStatus('error', 'Erreur chargement - Mode local');
+                        loadLocalData(); // Fallback vers données locales
+                        return;
+                    }
+                }
             }
         }
 
-        // Sauvegarder vers Firebase
+        // Sauvegarder vers Firebase avec retry et fallback
         async function saveToFirebase(collection, data, id = null) {
-            if (!isFirebaseConnected) return;
+            if (!isFirebaseConnected) {
+                console.log('Firebase non connecté, sauvegarde locale uniquement');
+                saveLocalData();
+                return true;
+            }
+            
+            updateSyncStatus('loading', 'Sauvegarde...');
             
             try {
                 if (id) {
-                    await db.collection(collection).doc(id).set(data);
+                    await db.collection(collection).doc(id).set(data, { merge: true });
                 } else {
-                    await db.collection(collection).add(data);
+                    const docRef = await db.collection(collection).add(data);
+                    return docRef.id;
                 }
                 
+                // Sauvegarder localement aussi
+                saveLocalData();
                 updateSyncStatus('success', 'Sauvegardé');
+                return true;
                 
             } catch (error) {
-                console.error('Erreur sauvegarde:', error);
-                updateSyncStatus('error', 'Erreur sauvegarde');
+                console.error('Erreur sauvegarde Firebase:', error);
+                updateSyncStatus('error', 'Erreur - Sauvegarde locale');
+                
+                // Fallback: sauvegarder localement
+                saveLocalData();
+                
+                // Si c'est un problème de permissions, suggérer une solution
+                if (error.code === 'permission-denied') {
+                    alert('Erreur de permissions Firebase. Vérifiez les règles de sécurité de votre base de données.');
+                }
+                
+                return false;
             }
         }
 
-        // Interface utilisateur
+        // Validation des données
+        function validateTransaction(data) {
+            const errors = [];
+            
+            if (!data.type || !['recette', 'depense'].includes(data.type)) {
+                errors.push('Type de transaction invalide');
+            }
+            
+            if (!data.description || data.description.trim().length < 3) {
+                errors.push('Description trop courte (minimum 3 caractères)');
+            }
+            
+            if (!data.amount || data.amount <= 0 || data.amount > 1000000) {
+                errors.push('Montant invalide (doit être entre 0.01 et 1,000,000)');
+            }
+            
+            if (!data.category || data.category.trim().length === 0) {
+                errors.push('Catégorie requise');
+            }
+            
+            if (!data.date || !data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                errors.push('Date invalide');
+            }
+            
+            return errors;
+        }
+
+        function validateMember(data) {
+            const errors = [];
+            
+            if (!data.firstName || data.firstName.trim().length < 2) {
+                errors.push('Prénom trop court (minimum 2 caractères)');
+            }
+            
+            if (!data.lastName || data.lastName.trim().length < 2) {
+                errors.push('Nom trop court (minimum 2 caractères)');
+            }
+            
+            if (!data.amount || data.amount <= 0 || data.amount > 10000) {
+                errors.push('Montant cotisation invalide (doit être entre 0.01 et 10,000)');
+            }
+            
+            // Vérifier doublons
+            const exists = members.some(m => 
+                m.firstName.toLowerCase().trim() === data.firstName.toLowerCase().trim() && 
+                m.lastName.toLowerCase().trim() === data.lastName.toLowerCase().trim()
+            );
+            
+            if (exists) {
+                errors.push('Ce membre existe déjà');
+            }
+            
+            return errors;
+        }
+
+        // Fonction utilitaire pour afficher les erreurs
+        function showErrors(errors) {
+            if (errors.length > 0) {
+                alert('Erreurs détectées:\n• ' + errors.join('\n• '));
+                return false;
+            }
+            return true;
+        }
+
+        // Formatage sécurisé des montants
+        function formatAmount(amount) {
+            return parseFloat(amount).toFixed(2);
+        }
+
+        // Nettoyage des chaînes
+        function sanitizeString(str) {
+            return str.trim().replace(/[<>]/g, '');
+        }
         function updateSyncStatus(type, message) {
             const statusEl = document.getElementById('syncStatus');
             statusEl.className = `sync-status sync-${type}`;
@@ -728,47 +932,115 @@
             document.getElementById('recentTransactions').innerHTML = recentTransactionsHTML;
         }
 
-        // Événements des formulaires
+        // Événements des formulaires avec validation
         document.getElementById('addTransactionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const newTransaction = {
+            const formData = {
                 type: document.getElementById('transactionType').value,
-                description: document.getElementById('description').value,
+                description: sanitizeString(document.getElementById('description').value),
                 amount: parseFloat(document.getElementById('amount').value),
-                category: document.getElementById('category').value,
-                date: document.getElementById('transactionDate').value,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                category: sanitizeString(document.getElementById('category').value),
+                date: document.getElementById('transactionDate').value
             };
+            
+            // Validation
+            const errors = validateTransaction(formData);
+            if (!showErrors(errors)) return;
+            
+            // Désactiver le bouton pendant la sauvegarde
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '💾 Ajout en cours...';
+            
+            try {
+                const newTransaction = {
+                    ...formData,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    created: new Date().toISOString()
+                };
 
-            transactions.unshift(newTransaction);
-            updateUI();
-            
-            // Sauvegarder vers Firebase
-            await saveToFirebase('transactions', newTransaction);
-            
-            this.reset();
-            setCurrentDate();
+                // Ajouter localement d'abord pour une réponse instantanée
+                const tempId = 'temp_' + Date.now();
+                transactions.unshift({ ...newTransaction, id: tempId });
+                updateUI();
+                
+                // Sauvegarder vers Firebase
+                const savedId = await saveToFirebase('transactions', newTransaction);
+                
+                if (savedId) {
+                    // Remplacer l'ID temporaire par l'ID Firebase
+                    const tempIndex = transactions.findIndex(t => t.id === tempId);
+                    if (tempIndex !== -1) {
+                        transactions[tempIndex].id = savedId;
+                    }
+                }
+                
+                this.reset();
+                setCurrentDate();
+                
+            } catch (error) {
+                console.error('Erreur ajout transaction:', error);
+                alert('Erreur lors de l\'ajout de la transaction');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         });
 
         document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const newMember = {
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
+            const formData = {
+                firstName: sanitizeString(document.getElementById('firstName').value),
+                lastName: sanitizeString(document.getElementById('lastName').value),
                 amount: parseFloat(document.getElementById('membershipAmount').value),
-                paid: false,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                paid: false
             };
+            
+            // Validation
+            const errors = validateMember(formData);
+            if (!showErrors(errors)) return;
+            
+            // Désactiver le bouton pendant la sauvegarde
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = '👤 Ajout en cours...';
+            
+            try {
+                const newMember = {
+                    ...formData,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                    created: new Date().toISOString()
+                };
 
-            members.push(newMember);
-            updateUI();
-            
-            // Sauvegarder vers Firebase
-            await saveToFirebase('members', newMember);
-            
-            this.reset();
+                // Ajouter localement d'abord
+                const tempId = 'temp_' + Date.now();
+                members.push({ ...newMember, id: tempId });
+                updateUI();
+                
+                // Sauvegarder vers Firebase
+                const savedId = await saveToFirebase('members', newMember);
+                
+                if (savedId) {
+                    // Remplacer l'ID temporaire par l'ID Firebase
+                    const tempIndex = members.findIndex(m => m.id === tempId);
+                    if (tempIndex !== -1) {
+                        members[tempIndex].id = savedId;
+                    }
+                }
+                
+                this.reset();
+                
+            } catch (error) {
+                console.error('Erreur ajout membre:', error);
+                alert('Erreur lors de l\'ajout du membre');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
         });
 
         function renderTransactions() {
@@ -1049,13 +1321,52 @@
             doc.save('transactions.pdf');
         }
 
-        // Initialisation
-        function init() {
-            setCurrentDate();
-            initFirebase();
+        // Surveillance du statut Firebase
+        function showFirebaseStatus() {
+            let status = `=== STATUT FIREBASE ===\n\n`;
+            status += `Connecté: ${isFirebaseConnected ? 'OUI' : 'NON'}\n`;
+            status += `Project ID: ${firebaseConfig.projectId || 'Non configuré'}\n`;
+            status += `Transactions: ${transactions.length}\n`;
+            status += `Membres: ${members.length}\n`;
+            
+            if (isFirebaseConnected) {
+                status += `Base de données: Firestore\n`;
+                status += `Collections: transactions, members\n`;
+            } else {
+                status += `Mode: Données locales uniquement\n`;
+            }
+            
+            const hasLocalBackup = localStorage.getItem('treasuryData') ? 'OUI' : 'NON';
+            status += `Sauvegarde locale: ${hasLocalBackup}\n`;
+            
+            alert(status);
+        }
+
+        // Auto-retry Firebase en cas de déconnexion réseau
+        function setupNetworkMonitoring() {
+            if ('navigator' in window && 'onLine' in navigator) {
+                window.addEventListener('online', () => {
+                    console.log('Connexion réseau restaurée');
+                    if (firebaseConfig.projectId && !isFirebaseConnected) {
+                        setTimeout(() => {
+                            initFirebase();
+                        }, 2000);
+                    }
+                });
+                
+                window.addEventListener('offline', () => {
+                    console.log('Connexion réseau perdue');
+                    updateSyncStatus('error', 'Mode hors ligne');
+                });
+            }
         }
 
         // Démarrer l'application
+        function init() {
+            setCurrentDate();
+            setupNetworkMonitoring();
+            initFirebase();
+        }
         init();
     </script>
 </body>
