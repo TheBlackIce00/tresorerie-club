@@ -884,230 +884,30 @@
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         }
 
-        // Système de sauvegarde multi-niveaux
-        function saveDataSecurely() {
-            const timestamp = new Date().toISOString();
-            const dataToSave = {
+        // Sauvegarde simple automatique
+        function saveData() {
+            const data = {
                 transactions,
                 members,
-                timestamp,
-                version: '1.0'
+                timestamp: new Date().toISOString()
             };
             
-            try {
-                // 1. Sauvegarde principale
-                localStorage.setItem('treasuryData', JSON.stringify(dataToSave));
-                
-                // 2. Sauvegarde de secours (backup)
-                localStorage.setItem('treasuryBackup', JSON.stringify(dataToSave));
-                
-                // 3. Sauvegarde historique (garde les 5 dernières versions)
-                const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
-                history.push(dataToSave);
-                
-                // Garder seulement les 5 dernières sauvegardes
-                if (history.length > 5) {
-                    history.shift(); // Supprimer la plus ancienne
-                }
-                
-                localStorage.setItem('treasuryHistory', JSON.stringify(history));
-                
-                // 4. Export automatique en JSON téléchargeable
-                if (Math.random() < 0.1) { // 10% de chance à chaque sauvegarde
-                    createAutoBackupFile();
-                }
-                
-                console.log('Données sauvegardées de manière sécurisée');
-                
-            } catch (error) {
-                console.error('Erreur de sauvegarde sécurisée:', error);
-                alert('Attention: Erreur de sauvegarde des données!');
-            }
+            localStorage.setItem('treasuryData', JSON.stringify(data));
         }
 
-        // Créer un fichier de sauvegarde automatique téléchargeable
-        function createAutoBackupFile() {
-            try {
-                const dataToSave = {
-                    transactions,
-                    members,
-                    timestamp: new Date().toISOString(),
-                    version: '1.0'
-                };
-                
-                const jsonData = JSON.stringify(dataToSave, null, 2);
-                const blob = new Blob([jsonData], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `tresorerie_backup_${new Date().toISOString().split('T')[0]}.json`;
-                a.style.display = 'none';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                console.log('Fichier de sauvegarde automatique créé');
-                
-            } catch (error) {
-                console.error('Erreur création fichier backup:', error);
-            }
-        }
-
-        // Charger les données avec système de récupération
-        function loadDataSecurely() {
-            try {
-                // 1. Essayer la sauvegarde principale
-                let data = localStorage.getItem('treasuryData');
-                
-                if (!data) {
-                    // 2. Essayer la sauvegarde de secours
-                    data = localStorage.getItem('treasuryBackup');
-                    console.log('Données récupérées depuis le backup');
-                }
-                
-                if (!data) {
-                    // 3. Essayer l'historique (dernière version)
-                    const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
-                    if (history.length > 0) {
-                        data = JSON.stringify(history[history.length - 1]);
-                        console.log('Données récupérées depuis l\'historique');
-                    }
-                }
-                
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    if (parsed.transactions) transactions = parsed.transactions;
-                    if (parsed.members) members = parsed.members;
-                    
+        // Chargement simple des données
+        function loadData() {
+            const saved = localStorage.getItem('treasuryData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    if (data.transactions) transactions = data.transactions;
+                    if (data.members) members = data.members;
                     updateUI();
-                    updateSyncStatus('success', 'Données restaurées');
-                    
-                    return true;
+                } catch (error) {
+                    console.error('Erreur de chargement:', error);
                 }
-                
-                return false;
-                
-            } catch (error) {
-                console.error('Erreur de chargement sécurisé:', error);
-                return false;
             }
-        }
-
-        // Fonction de restauration depuis l'historique
-        function showRestoreOptions() {
-            try {
-                const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
-                
-                if (history.length === 0) {
-                    alert('Aucun historique de sauvegarde disponible');
-                    return;
-                }
-                
-                let options = 'Sélectionnez une sauvegarde à restaurer:\n\n';
-                history.forEach((backup, index) => {
-                    const date = new Date(backup.timestamp).toLocaleString('fr-FR');
-                    const transCount = backup.transactions ? backup.transactions.length : 0;
-                    const memberCount = backup.members ? backup.members.length : 0;
-                    options += `${index + 1}. ${date} (${transCount} transactions, ${memberCount} membres)\n`;
-                });
-                
-                const choice = prompt(options + '\nEntrez le numéro (1-' + history.length + '):');
-                const index = parseInt(choice) - 1;
-                
-                if (index >= 0 && index < history.length) {
-                    const backup = history[index];
-                    transactions = backup.transactions || [];
-                    members = backup.members || [];
-                    
-                    updateUI();
-                    saveDataSecurely(); // Sauvegarder la restauration
-                    
-                    alert('Données restaurées avec succès!');
-                } else {
-                    alert('Sélection invalide');
-                }
-                
-            } catch (error) {
-                console.error('Erreur restauration:', error);
-                alert('Erreur lors de la restauration');
-            }
-        }
-
-        // Export des données en JSON
-        function exportDataAsJSON() {
-            try {
-                const dataToExport = {
-                    transactions,
-                    members,
-                    exportDate: new Date().toISOString(),
-                    version: '1.0'
-                };
-                
-                const jsonData = JSON.stringify(dataToExport, null, 2);
-                const blob = new Blob([jsonData], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `tresorerie_export_${new Date().toISOString().split('T')[0]}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                alert('Données exportées en JSON avec succès!');
-                
-            } catch (error) {
-                console.error('Erreur export JSON:', error);
-                alert('Erreur lors de l\'export');
-            }
-        }
-
-        // Import des données depuis un fichier JSON
-        function importDataFromJSON() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            
-            input.onchange = function(event) {
-                const file = event.target.files[0];
-                if (!file) return;
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        const importedData = JSON.parse(e.target.result);
-                        
-                        if (importedData.transactions && importedData.members) {
-                            const confirm = window.confirm(
-                                `Importer ${importedData.transactions.length} transactions et ${importedData.members.length} membres?\n\n` +
-                                'ATTENTION: Ceci remplacera toutes vos données actuelles!'
-                            );
-                            
-                            if (confirm) {
-                                transactions = importedData.transactions;
-                                members = importedData.members;
-                                
-                                updateUI();
-                                saveDataSecurely();
-                                
-                                alert('Données importées avec succès!');
-                            }
-                        } else {
-                            alert('Fichier JSON invalide - format non reconnu');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Erreur import:', error);
-                        alert('Erreur: Fichier JSON invalide');
-                    }
-                };
-                reader.readAsText(file);
-            };
-            
-            input.click();
         }
 
         function startAutoSync() {
