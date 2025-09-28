@@ -7,11 +7,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     
     <style>
-        /* Styles CSS (LAISSÉS INCHANGÉS) */
         * {
             margin: 0;
             padding: 0;
@@ -34,995 +34,978 @@
         }
 
         .header {
-            background: linear-gradient(90deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #4285f4 0%, #3367d6 100%);
             color: white;
-            padding: 20px 20px 40px;
+            padding: 20px;
             text-align: center;
-            border-bottom-left-radius: 10px;
-            border-bottom-right-radius: 10px;
+            position: relative;
         }
-        
+
         .header h1 {
-            margin-bottom: 5px;
-            font-size: 1.5em;
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
 
-        .balance-card {
-            background: white;
-            padding: 15px;
-            margin: -20px 20px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        .header p {
+            opacity: 0.9;
+            margin-top: 5px;
+            font-size: 14px;
         }
 
-        .balance-card h2 {
-            font-size: 1em;
-            color: #777;
-            margin-bottom: 5px;
+        .sync-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
 
-        .balance-card p {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #333;
+        .sync-success { background: rgba(40, 167, 69, 0.8); }
+        .sync-error { background: rgba(220, 53, 69, 0.8); }
+        .sync-loading { background: rgba(255, 193, 7, 0.8); }
+
+        .admin-panel {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .admin-panel.show { display: block; }
+
+        .admin-input {
+            width: 100%;
+            padding: 5px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 10px;
         }
 
         .tabs {
             display: flex;
-            justify-content: space-around;
-            border-bottom: 1px solid #eee;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
         }
 
-        .tab-button {
-            flex-grow: 1;
-            padding: 15px 10px;
+        .tab {
+            flex: 1;
+            padding: 15px;
             text-align: center;
-            background: #f8f8f8;
+            background: none;
             border: none;
             cursor: pointer;
-            font-size: 0.9em;
-            color: #777;
-            transition: background 0.3s, color 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+            color: #6c757d;
+            transition: all 0.3s ease;
         }
 
-        .tab-button.active {
-            background: white;
-            color: #667eea;
-            border-bottom: 3px solid #667eea;
-            font-weight: bold;
+        .tab.active {
+            background: #4285f4;
+            color: white;
+            border-radius: 25px;
+            margin: 5px;
         }
-        
+
         .tab-content {
+            display: none;
             padding: 20px;
         }
-        
-        .hidden {
-            display: none;
-        }
-        
-        form {
-            display: grid;
-            gap: 15px;
+
+        .tab-content.active {
+            display: block;
         }
 
-        form label {
-            font-weight: bold;
-            color: #555;
-            display: block;
+        .summary-cards {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .card-green { background: linear-gradient(135deg, #00d4aa, #01b496); }
+        .card-blue { background: linear-gradient(135deg, #4285f4, #3367d6); }
+        .card-red { background: linear-gradient(135deg, #ea4335, #d33b2c); }
+
+        .card h3 {
+            font-size: 14px;
+            opacity: 0.9;
             margin-bottom: 5px;
         }
 
-        form input, form select, form button {
+        .card .amount {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 1em;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
         }
 
-        form button {
-            background: #667eea;
-            color: white;
-            font-weight: bold;
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s;
-            margin-top: 10px;
+            transition: all 0.3s ease;
         }
 
-        form button:hover {
-            background: #5a6edb;
+        .btn-primary {
+            background: #4285f4;
+            color: white;
         }
-        
-        .transaction-list, .member-list {
-            list-style: none;
-            padding: 0;
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .transactions-list, .members-list {
             margin-top: 20px;
         }
 
         .transaction-item, .member-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid #eee;
         }
 
-        .transaction-item:last-child, .member-item:last-child {
-            border-bottom: none;
-        }
-
-        .item-info {
-            flex-grow: 1;
-        }
-
-        .item-description {
-            font-weight: bold;
+        .transaction-info h4, .member-info h4 {
             color: #333;
+            font-size: 16px;
+            margin-bottom: 5px;
         }
 
-        .item-date, .item-category, .item-status {
-            font-size: 0.8em;
-            color: #777;
+        .transaction-info p, .member-info p {
+            color: #666;
+            font-size: 12px;
         }
 
-        .item-amount {
-            font-weight: bold;
-            font-size: 1.1em;
+        .transaction-amount {
+            font-weight: 600;
+            font-size: 16px;
         }
 
-        .recette .item-amount {
-            color: #28a745; /* Vert pour recette */
+        .amount-positive { color: #28a745; }
+        .amount-negative { color: #dc3545; }
+
+        .payment-status {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
         }
 
-        .depense .item-amount {
-            color: #dc3545; /* Rouge pour dépense */
-        }
-
-        .member-item-info {
-            flex-grow: 1;
-        }
-        
-        .member-item-name {
-            font-weight: bold;
-            color: #333;
-        }
-
-        .member-item-status {
-            font-size: 0.8em;
-            margin-top: 5px;
-        }
-        
         .status-paid {
-            color: #28a745;
-            font-weight: bold;
+            background: #d4edda;
+            color: #155724;
         }
 
         .status-unpaid {
-            color: #dc3545;
-            font-weight: bold;
+            background: #f8d7da;
+            color: #721c24;
         }
 
-        .member-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .member-actions button, .transaction-item button {
-            background: #f8f8f8;
-            border: 1px solid #ddd;
-            padding: 8px 12px;
-            border-radius: 5px;
+        .toggle-payment {
+            background: none;
+            border: 2px solid #4285f4;
+            color: #4285f4;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
             cursor: pointer;
-            font-size: 0.8em;
-            color: #555;
+            transition: all 0.3s ease;
         }
 
-        .member-actions .toggle-pay-btn.paid {
-            background: #28a745;
+        .toggle-payment:hover {
+            background: #4285f4;
             color: white;
-            border-color: #28a745;
         }
 
-        .member-actions .toggle-pay-btn.unpaid {
-            background: #dc3545;
-            color: white;
-            border-color: #dc3545;
-        }
-        
-        .admin-controls {
+        .report-section {
+            background: #f8f9fa;
             padding: 20px;
-            border-top: 1px solid #eee;
+            border-radius: 15px;
+            margin-bottom: 20px;
         }
 
-        .admin-controls h3 {
+        .report-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
             margin-bottom: 15px;
-            color: #555;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
-        
-        .control-group {
-            margin-bottom: 15px;
+
+        .report-item h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .report-details {
             display: flex;
-            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
         }
 
-        .control-group button {
-            flex-grow: 1;
-            padding: 10px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        
-        .control-group button:nth-child(2) {
-            background: #f44336;
-        }
-        
-        .sync-status {
-            text-align: center;
-            font-size: 0.8em;
-            padding: 10px;
-            color: #777;
-        }
-        
-        .sync-status.success {
-            color: #28a745;
-        }
-        
-        .sync-status.error {
-            color: #dc3545;
-        }
-        
-        .config-panel h3 {
-            margin-bottom: 10px;
+        .report-balance {
+            font-weight: 600;
+            font-size: 16px;
+            text-align: right;
         }
 
-        .config-panel p {
-            margin-bottom: 15px;
-            font-size: 0.9em;
-            color: #777;
-        }
-        
-        .config-panel input[type="text"] {
-            margin-bottom: 10px;
-        }
-        
-        /* Styles pour les nouveaux boutons dans le panneau de configuration */
-        .config-buttons {
+        .export-buttons {
             display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
             margin-top: 20px;
         }
-        
-        .config-buttons button {
-            background: #007bff;
+
+        .btn-export {
+            background: #28a745;
             color: white;
+            padding: 12px;
             border: none;
-            padding: 10px;
-            border-radius: 5px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 0.9em;
+            transition: all 0.3s ease;
         }
-        
-        .config-buttons button:hover {
-            opacity: 0.9;
+
+        .btn-export:hover {
+            background: #218838;
+            transform: translateY(-2px);
         }
-        
-        .config-buttons button.danger {
-            background: #dc3545;
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
         }
-        
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .export-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Gestion de Trésorerie</h1>
+            <div class="sync-status" id="syncStatus">
+                <span class="loading"></span>
+                <span>Connexion...</span>
+            </div>
+            <h1>💰 Trésorerie Club</h1>
+            <p>Gestion financière avec Firebase</p>
+            <p style="font-size: 10px; opacity: 0.7; cursor: pointer;" onclick="toggleAdminPanel()">⚙️ Configuration Firebase</p>
+            
+            <div class="admin-panel" id="adminPanel">
+                <input type="text" class="admin-input" id="projectId" placeholder="Project ID Firebase">
+                <input type="text" class="admin-input" id="apiKey" placeholder="Clé API Firebase">
+                <input type="password" class="admin-input" id="adminPassword" placeholder="Mot de passe admin">
+                <button onclick="saveFirebaseConfig()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Connecter Firebase</button>
+            </div>
         </div>
-        
-        <div class="balance-card">
-            <h2>Solde Actuel</h2>
-            <p id="currentBalance">0.00 DT</p>
-        </div>
-        
+
         <div class="tabs">
-            <button class="tab-button active" data-tab="dashboard">Dashboard</button>
-            <button class="tab-button" data-tab="transactions">Transactions</button>
-            <button class="tab-button" data-tab="members">Membres</button>
-            <button class="tab-button" data-tab="config">Configuration</button>
+            <button class="tab active" onclick="switchTab('dashboard')">📊 Tableau de bord</button>
+            <button class="tab" onclick="switchTab('transactions')">💳 Transactions</button>
+            <button class="tab" onclick="switchTab('members')">👥 Membres</button>
+            <button class="tab" onclick="switchTab('reports')">📈 Rapports</button>
         </div>
 
-        <div class="sync-status" id="syncStatus">Non Synchronisé</div>
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="summary-cards">
+                <div class="card card-green">
+                    <div>
+                        <h3>Solde Actuel</h3>
+                        <div class="amount" id="currentBalance">0.00 DT</div>
+                    </div>
+                    <div>💰</div>
+                </div>
+                <div class="card card-blue">
+                    <div>
+                        <h3>Total Recettes</h3>
+                        <div class="amount" id="totalIncome">0.00 DT</div>
+                    </div>
+                    <div>📈</div>
+                </div>
+                <div class="card card-red">
+                    <div>
+                        <h3>Total Dépenses</h3>
+                        <div class="amount" id="totalExpenses">0.00 DT</div>
+                    </div>
+                    <div>📉</div>
+                </div>
+            </div>
 
-        <div class="tab-content" id="tab-dashboard">
-            <h2>Ajouter une Transaction</h2>
-            <form id="addTransactionForm">
-                <label for="transactionType">Type</label>
-                <select id="transactionType" required>
-                    <option value="recette">Recette</option>
-                    <option value="depense">Dépense</option>
-                </select>
-
-                <label for="description">Description</label>
-                <input type="text" id="description" placeholder="Ex: Cotisation, Achat matériel" required>
-
-                <label for="amount">Montant (DT)</label>
-                <input type="number" id="amount" step="0.01" required>
-                
-                <label for="category">Catégorie</label>
-                <select id="category" required>
-                    <option value="cotisation">Cotisation</option>
-                    <option value="evenement">Événement</option>
-                    <option value="fourniture">Fourniture</option>
-                    <option value="autre">Autre</option>
-                </select>
-
-                <label for="transactionDate">Date</label>
-                <input type="date" id="transactionDate" required>
-
-                <button type="submit">Ajouter Transaction</button>
-            </form>
-            
-            <hr style="margin: 20px 0;">
-            
-            <h2>Rapport Rapide</h2>
-            <p id="summaryText"></p>
-        </div>
-
-        <div class="tab-content hidden" id="tab-transactions">
-            <h2>Historique des Transactions</h2>
-            <ul class="transaction-list" id="transactionList">
-                </ul>
-            <div class="control-group" style="margin-top: 20px;">
-                <button onclick="exportTransactionsPDF()">Exporter PDF</button>
+            <div class="transactions-list">
+                <h3>Dernières Transactions</h3>
+                <div id="recentTransactions">
+                    <p style="text-align: center; color: #666; padding: 20px;">Chargement...</p>
+                </div>
             </div>
         </div>
-        
-        <div class="tab-content hidden" id="tab-members">
-            <h2>Liste des Membres</h2>
-            <ul class="member-list" id="memberList">
-                </ul>
-            
-            <hr style="margin: 20px 0;">
 
-            <h2>Ajouter un Membre</h2>
-            <form id="addMemberForm">
-                <label for="firstName">Prénom</label>
-                <input type="text" id="firstName" required>
+        <!-- Transactions Tab -->
+        <div id="transactions" class="tab-content">
+            <div class="form-section">
+                <h3>Ajouter une Transaction</h3>
+                <form id="addTransactionForm">
+                    <div class="form-group">
+                        <label>Type de Transaction</label>
+                        <select id="transactionType" required>
+                            <option value="">Sélectionner le type</option>
+                            <option value="recette">💰 Recette</option>
+                            <option value="depense">💸 Dépense</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <input type="text" id="description" placeholder="Description de la transaction" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Montant (DT)</label>
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Catégorie</label>
+                        <select id="category" required>
+                            <option value="">Sélectionner catégorie</option>
+                            <option value="Subventions">Subventions</option>
+                            <option value="Cotisations">Cotisations</option>
+                            <option value="Équipement">Équipement</option>
+                            <option value="Événements">Événements</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="transactionDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">➕ Ajouter Transaction</button>
+                </form>
+            </div>
 
-                <label for="lastName">Nom</label>
-                <input type="text" id="lastName" required>
-
-                <label for="cotisationAmount">Montant Cotisation</label>
-                <input type="number" id="cotisationAmount" step="0.01" required value="20.00">
-
-                <button type="submit">Ajouter Membre</button>
-            </form>
-        </div>
-        
-        <div class="tab-content hidden" id="tab-config">
-            <div class="config-panel">
-                <h2>Panneau de Configuration</h2>
-                
-                <hr style="margin: 20px 0;">
-
-                <h3>Accès Administrateur</h3>
-                <p>Basculer entre les modes Administrateur (écriture) et Visiteur (lecture seule).</p>
-                <button id="toggleAdminBtn" style="background: #ffc107; color: black;" onclick="toggleAdminAccess()">Activer Mode Admin</button>
-
-                <hr style="margin: 20px 0;">
-
-                <h3>Rapports & Exports</h3>
-                <div class="config-buttons">
-                    <button onclick="exportFinancialReportPDF()">Rapport Financier PDF</button>
+            <div class="transactions-list">
+                <h3>Toutes les Transactions</h3>
+                <div id="allTransactions">
+                    <p style="text-align: center; color: #666; padding: 20px;">Chargement...</p>
                 </div>
-                
-                <hr style="margin: 20px 0;">
-                
-                <h3>Maintenance de la Base de Données</h3>
-                <p style="color: #dc3545;">Ces boutons sont DANGEREUX. Ils effacent les données de la base de données Firebase.</p>
-                <div class="config-buttons">
-                    <button class="danger" onclick="clearAllTransactions()">Vider Transactions</button>
-                    <button class="danger" onclick="clearAllMembers()">Vider Membres</button>
-                </div>
-
             </div>
         </div>
-        
+
+        <!-- Members Tab -->
+        <div id="members" class="tab-content">
+            <div class="form-section">
+                <h3>Ajouter un Membre</h3>
+                <form id="addMemberForm">
+                    <div class="form-group">
+                        <label>Nom</label>
+                        <input type="text" id="lastName" placeholder="Nom de famille" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Prénom</label>
+                        <input type="text" id="firstName" placeholder="Prénom" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Montant Cotisation (DT)</label>
+                        <input type="number" id="membershipAmount" step="0.01" placeholder="0.00" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">👤 Ajouter Membre</button>
+                </form>
+            </div>
+
+            <div class="members-list">
+                <h3>Liste des Membres</h3>
+                <div class="export-buttons">
+                    <button class="btn-export" onclick="exportMembersPDF()">📄 Exporter PDF</button>
+                    <button class="btn-export" onclick="markAllPaid()">✅ Tout Payé</button>
+                </div>
+                <div id="membersList">
+                    <p style="text-align: center; color: #666; padding: 20px;">Chargement...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Tab -->
+        <div id="reports" class="tab-content">
+            <div class="report-section">
+                <h3>Rapport par Catégorie</h3>
+                <div id="categoryReport">
+                    <p style="text-align: center; color: #666; padding: 20px;">Chargement...</p>
+                </div>
+            </div>
+            
+            <div class="export-buttons">
+                <button class="btn-export" onclick="exportReportPDF()">📊 Export Rapport PDF</button>
+                <button class="btn-export" onclick="exportTransactionsPDF()">📋 Export Transactions PDF</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // =================================================================
-        //                 FIREBASE CONFIGURATION & INIT
-        // =================================================================
-        
-        // !!! REMPLACER CES CLÉS AVEC VOS PROPRES INFOS FIREBASE !!!
-        const firebaseConfig = {
-                apiKey: "AIzaSyAOFzbsKa6b9_9XMPNiP8VDJdhnuTqGyh0",
-                authDomain: "caisse-club.firebaseapp.com",
-                projectId: "caisse-club",
-                storageBucket: "caisse-club.firebasestorage.app",
-                messagingSenderId: "410619067499",
-                appId: "1:410619067499:web:5ae5a65a645c4b1634052e",
-                measurementId: "G-PEVSBVTZWV"
-            };
+        // Configuration Firebase
+        let firebaseConfig = {};
+        let db;
+        let isFirebaseConnected = false;
 
-        // Initialisation de l'application Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const db = app.firestore();
-        
-        // Références aux collections Firestore
-        const TRANSACTIONS_COLLECTION = db.collection("transactions");
-        const MEMBERS_COLLECTION = db.collection("members");
-        
-        // =================================================================
-        //                 VARIABLES GLOBALES & PERSISTANCE CONFIG
-        // =================================================================
-
-        let config = JSON.parse(localStorage.getItem('treasuryConfig')) || {
-            isAdmin: false,
-            lastTab: 'dashboard'
-        };
-        // Les données seront initialisées par Firebase, pas par localStorage
+        // Données locales
         let transactions = [];
         let members = [];
-        let autoSyncInterval;
 
-        // Fonction pour sauvegarder les paramètres non-data (isAdmin, lastTab)
-        function saveConfig() {
-            localStorage.setItem('treasuryConfig', JSON.stringify(config));
-            updateAdminUI();
+        // Initialisation Firebase
+        function initFirebase() {
+            const saved = localStorage.getItem('firebaseConfig');
+            if (saved) {
+                try {
+                    firebaseConfig = JSON.parse(saved);
+                    
+                    // Initialiser Firebase
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    isFirebaseConnected = true;
+                    
+                    updateSyncStatus('success', 'Firebase connecté');
+                    loadDataFromFirebase();
+                    
+                } catch (error) {
+                    console.error('Erreur Firebase:', error);
+                    updateSyncStatus('error', 'Erreur Firebase');
+                }
+            } else {
+                updateSyncStatus('error', 'Firebase non configuré');
+            }
         }
-        
-        // Fonction pour charger les paramètres non-data
-        function loadConfig() {
-            // Fait partie de l'initialisation de 'config'
-            updateAdminUI();
-        }
-        
-        // =================================================================
-        //                 FONCTIONS DE PERSISTANCE FIREBASE
-        // =================================================================
-        
-        // CHARGER TOUTES LES DONNÉES DE FIREBASE
-        async function loadFromFirestore() {
-            updateSyncStatus('loading', 'Chargement depuis Firebase...');
+
+        // Configuration Firebase
+        function saveFirebaseConfig() {
+            const projectId = document.getElementById('projectId').value;
+            const apiKey = document.getElementById('apiKey').value;
+            const password = document.getElementById('adminPassword').value;
+            
+            if (password !== 'admin123') {
+                alert('Mot de passe incorrect');
+                return;
+            }
+            
+            if (!projectId || !apiKey) {
+                alert('Veuillez remplir tous les champs');
+                return;
+            }
+            
+            firebaseConfig = {
+                apiKey: apiKey,
+                authDomain: projectId + '.firebaseapp.com',
+                projectId: projectId,
+                storageBucket: projectId + '.appspot.com',
+                messagingSenderId: '123456789',
+                appId: '1:123456789:web:abcdef'
+            };
+            
+            localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
             
             try {
-                // --- 1. Charger les Transactions ---
-                // Ordonné par date de création (timestamp)
-                const transactionsSnapshot = await TRANSACTIONS_COLLECTION.orderBy("timestamp", "desc").get();
-                transactions = transactionsSnapshot.docs.map(doc => ({
-                    id: doc.id, 
-                    ...doc.data(),
-                    amount: parseFloat(doc.data().amount || 0),
-                    // S'assurer que les valeurs numériques sont bien des nombres
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                isFirebaseConnected = true;
+                
+                updateSyncStatus('success', 'Firebase configuré');
+                loadDataFromFirebase();
+                toggleAdminPanel();
+                
+            } catch (error) {
+                console.error('Erreur configuration Firebase:', error);
+                updateSyncStatus('error', 'Erreur configuration');
+            }
+        }
+
+        // Charger données depuis Firebase
+        async function loadDataFromFirebase() {
+            if (!isFirebaseConnected) return;
+            
+            updateSyncStatus('loading', 'Chargement...');
+            
+            try {
+                // Charger transactions
+                const transactionsRef = await db.collection('transactions').orderBy('timestamp', 'desc').get();
+                transactions = transactionsRef.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
                 }));
                 
-                // --- 2. Charger les Membres ---
-                const membersSnapshot = await MEMBERS_COLLECTION.get();
-                members = membersSnapshot.docs.map(doc => ({
-                    id: doc.id, 
-                    ...doc.data(),
-                    cotisationAmount: parseFloat(doc.data().cotisationAmount || 0),
-                    paid: doc.data().paid === true || doc.data().paid === 'true' // Assurer un booléen
+                // Charger membres
+                const membersRef = await db.collection('members').get();
+                members = membersRef.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
                 }));
                 
                 updateUI();
-                updateSyncStatus('success', `Synchronisé - ${new Date().toLocaleTimeString('fr-FR')}`);
+                updateSyncStatus('success', 'Synchronisé');
                 
             } catch (error) {
-                console.error('Erreur de chargement Firebase:', error);
-                updateSyncStatus('error', 'Erreur de synchronisation Firebase. Vérifiez la console.');
+                console.error('Erreur chargement:', error);
+                updateSyncStatus('error', 'Erreur chargement');
             }
         }
-        
-        // CRÉER/AJOUTER UNE NOUVELLE TRANSACTION
-        async function addTransactionToFirestore(newTransaction) {
-            if (!config.isAdmin) return;
+
+        // Sauvegarder vers Firebase
+        async function saveToFirebase(collection, data, id = null) {
+            if (!isFirebaseConnected) return;
+            
             try {
-                // Supprimer l'ID local temporaire avant d'ajouter
-                const { id, ...dataToSave } = newTransaction; 
-                
-                const docRef = await TRANSACTIONS_COLLECTION.add(dataToSave);
-                
-                // Mettre à jour l'ID de la transaction locale avec l'ID Firestore généré
-                const localIndex = transactions.findIndex(t => t.timestamp === newTransaction.timestamp && t.description === newTransaction.description);
-                if (localIndex !== -1) {
-                     transactions[localIndex].id = docRef.id;
+                if (id) {
+                    await db.collection(collection).doc(id).set(data);
+                } else {
+                    await db.collection(collection).add(data);
                 }
                 
-                updateSyncStatus('success', 'Transaction ajoutée à distance.');
-            } catch (error) {
-                console.error('Erreur d\'ajout transaction:', error);
-                updateSyncStatus('error', 'Échec de l\'ajout de la transaction.');
-            }
-        }
-        
-        // METTRE À JOUR LE STATUT D'UN MEMBRE
-        async function updateMemberInFirestore(memberId, paidStatus, newTimestamp) {
-            if (!config.isAdmin) return;
-            try {
-                await MEMBERS_COLLECTION.doc(memberId).update({
-                    paid: paidStatus,
-                    lastPaymentDate: newTimestamp
-                });
-                updateSyncStatus('success', 'Statut du membre mis à jour à distance.');
-            } catch (error) {
-                console.error('Erreur de mise à jour membre:', error);
-                updateSyncStatus('error', 'Échec de la MAJ du membre.');
-            }
-        }
-
-        // CRÉER/AJOUTER UN NOUVEAU MEMBRE
-        async function addMemberToFirestore(newMember) {
-            if (!config.isAdmin) return;
-            try {
-                const docRef = await MEMBERS_COLLECTION.add(newMember);
+                updateSyncStatus('success', 'Sauvegardé');
                 
-                // Mettre à jour l'ID local
-                const localIndex = members.findIndex(m => m.firstName === newMember.firstName && m.lastName === newMember.lastName);
-                if (localIndex !== -1) {
-                    members[localIndex].id = docRef.id;
-                }
-                updateSyncStatus('success', 'Membre ajouté à distance.');
             } catch (error) {
-                console.error('Erreur d\'ajout membre:', error);
-                updateSyncStatus('error', 'Échec de l\'ajout du membre.');
-            }
-        }
-        
-        // SUPPRIMER UNE TRANSACTION
-        async function deleteTransactionFromFirestore(docId) {
-            if (!config.isAdmin) return;
-            try {
-                await TRANSACTIONS_COLLECTION.doc(docId).delete();
-                updateSyncStatus('success', 'Transaction supprimée à distance.');
-            } catch (error) {
-                console.error('Erreur de suppression transaction:', error);
-                updateSyncStatus('error', 'Échec de la suppression transaction.');
-            }
-        }
-        
-        // SUPPRIMER UN MEMBRE
-        async function deleteMemberFromFirestore(docId) {
-            if (!config.isAdmin) return;
-            try {
-                await MEMBERS_COLLECTION.doc(docId).delete();
-                updateSyncStatus('success', 'Membre supprimé à distance.');
-            } catch (error) {
-                console.error('Erreur de suppression membre:', error);
-                updateSyncStatus('error', 'Échec de la suppression membre.');
+                console.error('Erreur sauvegarde:', error);
+                updateSyncStatus('error', 'Erreur sauvegarde');
             }
         }
 
-
-        // =================================================================
-        //                 LOGIQUE DE BASE (AJUSTÉE)
-        // =================================================================
-        
-        function init() {
-            loadConfig(); // Charge les paramètres (isAdmin, lastTab)
-            // Lancement du chargement des données depuis Firebase
-            loadFromFirestore(); 
-            startAutoSync();
-            setCurrentDate(); // Initialise la date dans le formulaire
-            
-            // Écouteurs d'événements pour les boutons d'onglet
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.addEventListener('click', () => {
-                    const tab = button.getAttribute('data-tab');
-                    showTab(tab);
-                });
-            });
-            
-            showTab(config.lastTab);
-        }
-
-        // DÉMARRAGE DE LA SYNCHRONISATION AUTOMATIQUE
-        function startAutoSync() {
-            if (autoSyncInterval) {
-                clearInterval(autoSyncInterval);
-            }
-            // Synchronise les données toutes les 30 secondes
-            autoSyncInterval = setInterval(loadFromFirestore, 30000); 
-        }
-
-        function showTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.add('hidden');
-            });
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-
-            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-            document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add('active');
-            
-            config.lastTab = tabName;
-            saveConfig();
-        }
-
+        // Interface utilisateur
         function updateSyncStatus(type, message) {
             const statusEl = document.getElementById('syncStatus');
-            statusEl.textContent = message;
-            statusEl.className = 'sync-status ' + type;
+            statusEl.className = `sync-status sync-${type}`;
+            
+            let icon = '🔄';
+            if (type === 'success') icon = '✅';
+            if (type === 'error') icon = '❌';
+            if (type === 'loading') icon = '<span class="loading"></span>';
+            
+            statusEl.innerHTML = `${icon} <span>${message}</span>`;
+        }
+
+        function toggleAdminPanel() {
+            const panel = document.getElementById('adminPanel');
+            panel.classList.toggle('show');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
         }
 
         function setCurrentDate() {
             const today = new Date().toISOString().split('T')[0];
             const dateInput = document.getElementById('transactionDate');
-            if (dateInput) {
-                dateInput.value = today;
-            }
-        }
-
-        function updateAdminUI() {
-            const adminControls = document.querySelectorAll('.tab-content form button, .member-actions button, .config-buttons button');
-            const toggleBtn = document.getElementById('toggleAdminBtn');
-            const forms = document.querySelectorAll('form');
-            
-            if (config.isAdmin) {
-                adminControls.forEach(el => el.disabled = false);
-                toggleBtn.textContent = 'Désactiver Mode Admin (Activé)';
-                toggleBtn.style.background = '#28a745';
-                forms.forEach(form => form.style.opacity = '1');
-            } else {
-                // Désactiver les boutons d'action d'écriture
-                adminControls.forEach(el => {
-                    // Ne pas désactiver l'export PDF
-                    if (el.textContent.indexOf('PDF') === -1) {
-                        el.disabled = true;
-                    }
-                });
-                toggleBtn.textContent = 'Activer Mode Admin (Désactivé)';
-                toggleBtn.style.background = '#ffc107';
-                forms.forEach(form => form.style.opacity = '0.7');
-            }
-        }
-
-        function toggleAdminAccess() {
-            config.isAdmin = !config.isAdmin;
-            saveConfig();
-            updateAdminUI();
-            updateUI(); // Rafraîchit au cas où des éléments dépendent de l'accès
-        }
-        
-        function calculateBalance() {
-            let totalRecettes = 0;
-            let totalDepenses = 0;
-            
-            transactions.forEach(t => {
-                const amount = t.amount;
-                if (t.type === 'recette') {
-                    totalRecettes += amount;
-                } else if (t.type === 'depense') {
-                    totalDepenses += amount;
-                }
-            });
-
-            const balance = totalRecettes - totalDepenses;
-            
-            document.getElementById('currentBalance').textContent = `${balance.toFixed(2)} DT`;
-            
-            // Texte de résumé
-            const unpaidMembers = members.filter(m => !m.paid).length;
-            const summaryText = `Total Recettes: ${totalRecettes.toFixed(2)} DT. Total Dépenses: ${totalDepenses.toFixed(2)} DT. ${unpaidMembers} membre(s) en attente de cotisation.`;
-            document.getElementById('summaryText').textContent = summaryText;
+            if (dateInput) dateInput.value = today;
         }
 
         function updateUI() {
-            calculateBalance();
+            updateDashboard();
             renderTransactions();
             renderMembers();
+            renderReports();
         }
 
-        function renderTransactions() {
-            const list = document.getElementById('transactionList');
-            list.innerHTML = ''; // Vider la liste
+        function updateDashboard() {
+            const totalIncome = transactions
+                .filter(t => t.type === 'recette')
+                .reduce((sum, t) => sum + t.amount, 0);
             
-            transactions.forEach(t => {
-                const listItem = document.createElement('li');
-                listItem.className = `transaction-item ${t.type}`;
-                
-                const deleteBtn = `<button onclick="deleteTransaction('${t.id}')" ${config.isAdmin ? '' : 'disabled'}>Supprimer</button>`;
-                
-                listItem.innerHTML = `
-                    <div class="item-info">
-                        <div class="item-description">${t.description}</div>
-                        <div class="item-details">
-                            <span class="item-date">${t.date}</span> |
-                            <span class="item-category">${t.category}</span>
-                        </div>
-                    </div>
-                    <div class="item-amount">${(t.type === 'recette' ? '+' : '-')}${t.amount.toFixed(2)} DT</div>
-                    ${deleteBtn}
-                `;
-                
-                list.appendChild(listItem);
-            });
-        }
-        
-        function renderMembers() {
-            const list = document.getElementById('memberList');
-            list.innerHTML = ''; // Vider la liste
+            const totalExpenses = transactions
+                .filter(t => t.type === 'depense')
+                .reduce((sum, t) => sum + t.amount, 0);
             
-            members.sort((a, b) => a.lastName.localeCompare(b.lastName)); // Tri alphabétique
-            
-            members.forEach(m => {
-                const listItem = document.createElement('li');
-                listItem.className = 'member-item';
-                
-                const statusClass = m.paid ? 'status-paid' : 'status-unpaid';
-                const buttonClass = m.paid ? 'paid' : 'unpaid';
-                const buttonText = m.paid ? 'Marquer Impayé' : 'Marquer Payé';
-                
-                const memberActions = `
-                    <div class="member-actions">
-                        <button class="toggle-pay-btn ${buttonClass}" onclick="togglePayment('${m.id}', ${m.paid}, ${m.cotisationAmount})" ${config.isAdmin ? '' : 'disabled'}>${buttonText}</button>
-                        <button onclick="deleteMember('${m.id}')" ${config.isAdmin ? '' : 'disabled'}>Supprimer</button>
-                    </div>
-                `;
-                
-                listItem.innerHTML = `
-                    <div class="member-item-info">
-                        <div class="member-item-name">${m.firstName} ${m.lastName}</div>
-                        <div class="member-item-status">Cotisation: ${m.cotisationAmount.toFixed(2)} DT | <span class="${statusClass}">${m.paid ? 'Payé' : 'Impayé'}</span></div>
-                    </div>
-                    ${memberActions}
-                `;
-                
-                list.appendChild(listItem);
-            });
-        }
-        
-        // =================================================================
-        //                 ACTIONS SUR LES DONNÉES (AJUSTÉES FIREBASE)
-        // =================================================================
+            const currentBalance = totalIncome - totalExpenses;
 
-        // HANDLER POUR AJOUTER UNE TRANSACTION
-        document.getElementById('addTransactionForm').addEventListener('submit', function(e) {
+            document.getElementById('totalIncome').textContent = totalIncome.toFixed(2) + ' DT';
+            document.getElementById('totalExpenses').textContent = totalExpenses.toFixed(2) + ' DT';
+            document.getElementById('currentBalance').textContent = currentBalance.toFixed(2) + ' DT';
+
+            const recentTransactions = transactions.slice(0, 3);
+            const recentTransactionsHTML = recentTransactions.length > 0 ? recentTransactions.map(transaction => `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <h4>${transaction.description}</h4>
+                        <p>${transaction.category} • ${transaction.date}</p>
+                    </div>
+                    <div class="transaction-amount ${transaction.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
+                        ${transaction.type === 'recette' ? '+' : '-'}${transaction.amount.toFixed(2)} DT
+                    </div>
+                </div>
+            `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune transaction</p>';
+            
+            document.getElementById('recentTransactions').innerHTML = recentTransactionsHTML;
+        }
+
+        // Événements des formulaires
+        document.getElementById('addTransactionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!config.isAdmin) return alert("Vous n'êtes pas en mode Administrateur.");
-
+            
             const newTransaction = {
-                // ID est temporaire, Firestore le remplacera
-                id: Date.now().toString(), 
                 type: document.getElementById('transactionType').value,
                 description: document.getElementById('description').value,
                 amount: parseFloat(document.getElementById('amount').value),
                 category: document.getElementById('category').value,
                 date: document.getElementById('transactionDate').value,
-                timestamp: new Date().toISOString() // Horodatage pour tri et référence
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            transactions.unshift(newTransaction); // Ajouter en haut localement
-            addTransactionToFirestore(newTransaction); // Envoyer à Firebase
-            
+            transactions.unshift(newTransaction);
             updateUI();
+            
+            // Sauvegarder vers Firebase
+            await saveToFirebase('transactions', newTransaction);
+            
             this.reset();
             setCurrentDate();
         });
-        
-        // HANDLER POUR AJOUTER UN MEMBRE
-        document.getElementById('addMemberForm').addEventListener('submit', function(e) {
+
+        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            if (!config.isAdmin) return alert("Vous n'êtes pas en mode Administrateur.");
             
             const newMember = {
-                id: Date.now().toString(), // ID local temporaire
-                firstName: document.getElementById('firstName').value.trim(),
-                lastName: document.getElementById('lastName').value.trim(),
-                cotisationAmount: parseFloat(document.getElementById('cotisationAmount').value),
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                amount: parseFloat(document.getElementById('membershipAmount').value),
                 paid: false,
-                lastPaymentDate: null
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            members.push(newMember); // Ajouter localement
-            addMemberToFirestore(newMember); // Envoyer à Firebase
-            
+            members.push(newMember);
             updateUI();
+            
+            // Sauvegarder vers Firebase
+            await saveToFirebase('members', newMember);
+            
             this.reset();
         });
 
-        // HANDLER POUR MARQUER PAYÉ/IMPAYÉ
-        function togglePayment(memberId, isCurrentlyPaid, cotisationAmount) {
-            if (!config.isAdmin) return alert("Vous n'êtes pas en mode Administrateur.");
+        function renderTransactions() {
+            const transactionsHTML = transactions.length > 0 ? transactions.map(transaction => `
+                <div class="transaction-item">
+                    <div class="transaction-info">
+                        <h4>${transaction.description}</h4>
+                        <p>${transaction.category} • ${transaction.date}</p>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="transaction-amount ${transaction.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
+                            ${transaction.type === 'recette' ? '+' : '-'}${transaction.amount.toFixed(2)} DT
+                        </div>
+                        <button onclick="deleteTransaction('${transaction.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 12px;" title="Supprimer">×</button>
+                    </div>
+                </div>
+            `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune transaction</p>';
             
-            const member = members.find(m => m.id === memberId);
-            if (!member) return;
+            document.getElementById('allTransactions').innerHTML = transactionsHTML;
+        }
 
-            const newPaidStatus = !isCurrentlyPaid;
-            const nowIso = new Date().toISOString();
+        function renderMembers() {
+            const membersHTML = members.length > 0 ? members.map(member => `
+                <div class="member-item">
+                    <div class="member-info">
+                        <h4>${member.firstName} ${member.lastName}</h4>
+                        <p>Cotisation: ${member.amount.toFixed(2)} DT</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: end; gap: 5px;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <span class="payment-status ${member.paid ? 'status-paid' : 'status-unpaid'}">
+                                ${member.paid ? '✅ Payé' : '❌ Non payé'}
+                            </span>
+                            <button onclick="deleteMember('${member.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 10px;" title="Supprimer">×</button>
+                        </div>
+                        <button class="toggle-payment" onclick="togglePayment('${member.id}')">
+                            ${member.paid ? 'Marquer non payé' : 'Marquer payé'}
+                        </button>
+                    </div>
+                </div>
+            `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucun membre</p>';
             
-            // 1. Gérer la transaction de cotisation
-            const transactionDescription = `Cotisation ${member.firstName} ${member.lastName}`;
+            document.getElementById('membersList').innerHTML = membersHTML;
+        }
+
+        async function togglePayment(memberId) {
+            const memberIndex = members.findIndex(m => m.id === memberId);
+            const member = members[memberIndex];
             
-            if (newPaidStatus) {
-                // Ajouter la transaction (Recette)
-                const newTransaction = {
-                    id: Date.now().toString(), 
-                    type: 'recette',
-                    description: transactionDescription,
-                    amount: cotisationAmount,
-                    category: 'cotisation',
-                    date: new Date().toISOString().split('T')[0],
-                    timestamp: nowIso
-                };
-                transactions.unshift(newTransaction);
-                addTransactionToFirestore(newTransaction);
+            if (member) {
+                if (!member.paid) {
+                    const newTransaction = {
+                        type: 'recette',
+                        description: `Cotisation - ${member.firstName} ${member.lastName}`,
+                        amount: member.amount,
+                        category: 'Cotisations',
+                        date: new Date().toISOString().split('T')[0],
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    transactions.unshift(newTransaction);
+                    await saveToFirebase('transactions', newTransaction);
+                }
+                
+                member.paid = !member.paid;
+                await saveToFirebase('members', member, memberId);
+                
+                updateUI();
+            }
+        }
 
-            } else {
-                // Si on marque impayé, on cherche et supprime la transaction de cotisation la plus récente
-                const indexToRemove = transactions.findIndex(t => 
-                    t.description === transactionDescription && 
-                    t.type === 'recette' && 
-                    t.amount === cotisationAmount
-                );
-
-                if (indexToRemove !== -1) {
-                    const docIdToRemove = transactions[indexToRemove].id;
-                    transactions.splice(indexToRemove, 1);
-                    deleteTransactionFromFirestore(docIdToRemove);
+        async function markAllPaid() {
+            for (let member of members) {
+                if (!member.paid) {
+                    const newTransaction = {
+                        type: 'recette',
+                        description: `Cotisation - ${member.firstName} ${member.lastName}`,
+                        amount: member.amount,
+                        category: 'Cotisations',
+                        date: new Date().toISOString().split('T')[0],
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    transactions.unshift(newTransaction);
+                    await saveToFirebase('transactions', newTransaction);
+                    
+                    member.paid = true;
+                    await saveToFirebase('members', member, member.id);
                 }
             }
-            
-            // 2. Mettre à jour le statut du membre localement
-            member.paid = newPaidStatus;
-            member.lastPaymentDate = newPaidStatus ? nowIso : null;
-
-            // 3. Mettre à jour le statut du membre dans Firebase
-            updateMemberInFirestore(member.id, member.paid, member.lastPaymentDate);
             
             updateUI();
         }
 
-        // SUPPRIMER UNE TRANSACTION
-        function deleteTransaction(transactionId) {
-            if (!config.isAdmin) return alert("Vous n'êtes pas en mode Administrateur.");
-            
+        async function deleteTransaction(transactionId) {
             if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
                 const index = transactions.findIndex(t => t.id === transactionId);
-                
                 if (index !== -1) {
-                    // 1. Supprimer dans Firebase
-                    deleteTransactionFromFirestore(transactionId);
-                    
-                    // 2. Supprimer localement
-                    transactions.splice(index, 1); 
+                    transactions.splice(index, 1);
                     updateUI();
+                    
+                    if (isFirebaseConnected) {
+                        await db.collection('transactions').doc(transactionId).delete();
+                    }
                 }
             }
         }
-        
-        // SUPPRIMER UN MEMBRE
-        function deleteMember(memberId) {
-            if (!config.isAdmin) return alert("Vous n'êtes pas en mode Administrateur.");
 
+        async function deleteMember(memberId) {
             const member = members.find(m => m.id === memberId);
-            if (!member) return;
-
-            if (confirm(`Êtes-vous sûr de vouloir supprimer ${member.firstName} ${member.lastName} ?`)) {
+            if (member && confirm(`Êtes-vous sûr de vouloir supprimer ${member.firstName} ${member.lastName} ?`)) {
                 const memberIndex = members.findIndex(m => m.id === memberId);
-
                 if (memberIndex !== -1) {
-                    // 1. Supprimer dans Firebase
-                    deleteMemberFromFirestore(memberId);
-                    
-                    // 2. Supprimer localement
                     members.splice(memberIndex, 1);
                     updateUI();
+                    
+                    if (isFirebaseConnected) {
+                        await db.collection('members').doc(memberId).delete();
+                    }
                 }
             }
         }
-        
-        // =================================================================
-        //                 FONCTIONS DE MAINTENANCE/CLEANUP
-        // =================================================================
 
-        // Fonction pour effacer toutes les transactions
-        function clearAllTransactions() {
-            if (!config.isAdmin || !confirm("Êtes-vous SÛR de vouloir effacer TOUTES les transactions ? Cette action est irréversible !")) return;
-
-            // Firebase ne permet pas la suppression de collection entière via le client, 
-            // il faut itérer et supprimer par lot ou utiliser une Cloud Function.
-            // Pour ce code client simple, nous allons supprimer un par un.
-            updateSyncStatus('loading', 'Suppression de toutes les transactions...');
+        function renderReports() {
+            const categories = {};
             
-            const deletePromises = transactions.map(t => TRANSACTIONS_COLLECTION.doc(t.id).delete());
+            transactions.forEach(transaction => {
+                if (!categories[transaction.category]) {
+                    categories[transaction.category] = {
+                        recettes: 0,
+                        depenses: 0
+                    };
+                }
+                
+                if (transaction.type === 'recette') {
+                    categories[transaction.category].recettes += transaction.amount;
+                } else {
+                    categories[transaction.category].depenses += transaction.amount;
+                }
+            });
 
-            Promise.all(deletePromises)
-                .then(() => {
-                    transactions = []; // Vider localement
-                    updateUI();
-                    updateSyncStatus('success', 'Toutes les transactions ont été effacées.');
-                })
-                .catch(error => {
-                    console.error("Erreur lors de la suppression des transactions: ", error);
-                    updateSyncStatus('error', 'Erreur lors de la suppression des transactions.');
-                });
+            const reportHTML = Object.keys(categories).length > 0 ? Object.entries(categories).map(([category, data]) => {
+                const balance = data.recettes - data.depenses;
+                return `
+                    <div class="report-item">
+                        <h4>${category}</h4>
+                        <div class="report-details">
+                            <span>Recettes: ${data.recettes.toFixed(2)} DT</span>
+                            <span>Dépenses: ${data.depenses.toFixed(2)} DT</span>
+                        </div>
+                        <div class="report-balance ${balance >= 0 ? 'amount-positive' : 'amount-negative'}">
+                            Solde: ${balance.toFixed(2)} DT
+                        </div>
+                    </div>
+                `;
+            }).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune donnée pour le rapport</p>';
+
+            document.getElementById('categoryReport').innerHTML = reportHTML;
         }
-        
-        // Fonction pour effacer tous les membres
-        function clearAllMembers() {
-            if (!config.isAdmin || !confirm("Êtes-vous SÛR de vouloir effacer TOUS les membres ? Cette action est irréversible !")) return;
 
-            updateSyncStatus('loading', 'Suppression de tous les membres...');
-
-            const deletePromises = members.map(m => MEMBERS_COLLECTION.doc(m.id).delete());
-
-            Promise.all(deletePromises)
-                .then(() => {
-                    members = []; // Vider localement
-                    updateUI();
-                    updateSyncStatus('success', 'Tous les membres ont été effacés.');
-                })
-                .catch(error => {
-                    console.error("Erreur lors de la suppression des membres: ", error);
-                    updateSyncStatus('error', 'Erreur lors de la suppression des membres.');
-                });
-        }
-        
-        
-        // =================================================================
-        //                 FONCTIONS PDF (LAISSÉES INCHANGÉES)
-        // =================================================================
-        
-        function exportFinancialReportPDF() {
+        // Exports PDF
+        function exportMembersPDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
             doc.setFontSize(20);
-            doc.text('Rapport Financier', 20, 30);
+            doc.text('Liste des Membres - Trésorerie Club', 20, 30);
             
             doc.setFontSize(12);
-            doc.text(`Date du Rapport: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+            doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
 
-            let totalRecettes = 0;
-            let totalDepenses = 0;
-            const categorySummary = {};
+            const tableData = members.map(member => [
+                `${member.firstName} ${member.lastName}`,
+                `${member.amount.toFixed(2)} DT`,
+                member.paid ? 'Payé' : 'Non payé'
+            ]);
 
-            transactions.forEach(t => {
-                const amount = t.amount;
-                const category = t.category;
+            doc.autoTable({
+                startY: 60,
+                head: [['Nom Complet', 'Montant', 'Statut']],
+                body: tableData,
+                theme: 'grid',
+                styles: { fontSize: 10 },
+                headStyles: { fillColor: [66, 133, 244] }
+            });
 
-                if (!categorySummary[category]) {
-                    categorySummary[category] = { recettes: 0, depenses: 0 };
+            const paidMembers = members.filter(m => m.paid).length;
+            const unpaidMembers = members.length - paidMembers;
+            const totalAmount = members.reduce((sum, m) => sum + (m.paid ? m.amount : 0), 0);
+
+            const finalY = doc.lastAutoTable.finalY + 20;
+            doc.text(`Résumé:`, 20, finalY);
+            doc.text(`• Total membres: ${members.length}`, 25, finalY + 10);
+            doc.text(`• Membres ayant payé: ${paidMembers}`, 25, finalY + 20);
+            doc.text(`• Membres n'ayant pas payé: ${unpaidMembers}`, 25, finalY + 30);
+            doc.text(`• Total collecté: ${totalAmount.toFixed(2)} DT`, 25, finalY + 40);
+
+            doc.save('liste_membres.pdf');
+        }
+
+        function exportReportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(20);
+            doc.text('Rapport Financier - Trésorerie Club', 20, 30);
+            
+            doc.setFontSize(12);
+            doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+
+            const totalIncome = transactions.filter(t => t.type === 'recette').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = transactions.filter(t => t.type === 'depense').reduce((sum, t) => sum + t.amount, 0);
+            const balance = totalIncome - totalExpenses;
+
+            doc.setFontSize(14);
+            doc.text('Résumé Financier:', 20, 65);
+            doc.setFontSize(12);
+            doc.text(`Total Recettes: ${totalIncome.toFixed(2)} DT`, 25, 80);
+            doc.text(`Total Dépenses: ${totalExpenses.toFixed(2)} DT`, 25, 90);
+            doc.text(`Solde Actuel: ${balance.toFixed(2)} DT`, 25, 100);
+
+            const categories = {};
+            transactions.forEach(transaction => {
+                if (!categories[transaction.category]) {
+                    categories[transaction.category] = { recettes: 0, depenses: 0 };
                 }
-
-                if (t.type === 'recette') {
-                    totalRecettes += amount;
-                    categorySummary[category].recettes += amount;
-                } else if (t.type === 'depense') {
-                    totalDepenses += amount;
-                    categorySummary[category].depenses += amount;
+                if (transaction.type === 'recette') {
+                    categories[transaction.category].recettes += transaction.amount;
+                } else {
+                    categories[transaction.category].depenses += transaction.amount;
                 }
             });
 
-            const balance = totalRecettes - totalDepenses;
-
-            doc.setFontSize(14);
-            doc.text('Synthèse Globale', 20, 60);
-            doc.setFontSize(12);
-            doc.text(`Total Recettes: ${totalRecettes.toFixed(2)} DT`, 20, 70);
-            doc.text(`Total Dépenses: ${totalDepenses.toFixed(2)} DT`, 20, 80);
-            doc.text(`Solde Net: ${balance.toFixed(2)} DT`, 20, 90);
-            
-            doc.setFontSize(14);
-            doc.text('Synthèse par Catégorie', 20, 110);
-            
-            const tableData = Object.keys(categorySummary).map(category => {
-                const summary = categorySummary[category];
-                const solde = summary.recettes - summary.depenses;
-                return [
-                    category.charAt(0).toUpperCase() + category.slice(1),
-                    summary.recettes.toFixed(2) + ' DT',
-                    summary.depenses.toFixed(2) + ' DT',
-                    solde.toFixed(2) + ' DT'
-                ];
-            });
+            const tableData = Object.entries(categories).map(([category, data]) => [
+                category,
+                `${data.recettes.toFixed(2)} DT`,
+                `${data.depenses.toFixed(2)} DT`,
+                `${(data.recettes - data.depenses).toFixed(2)} DT`
+            ]);
 
             doc.autoTable({
                 startY: 120,
@@ -1063,12 +1046,17 @@
                 headStyles: { fillColor: [66, 133, 244] }
             });
 
-            doc.save('historique_transactions.pdf');
+            doc.save('transactions.pdf');
         }
 
+        // Initialisation
+        function init() {
+            setCurrentDate();
+            initFirebase();
+        }
 
-        // INITIALISATION AU CHARGEMENT DE LA PAGE
-        window.onload = init;
+        // Démarrer l'application
+        init();
     </script>
 </body>
 </html>
