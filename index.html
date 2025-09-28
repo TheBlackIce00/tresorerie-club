@@ -409,6 +409,11 @@
                     <button onclick="loadFromSheet()" style="padding: 5px; font-size: 10px; background: #17a2b8; color: white; border: none; border-radius: 3px;">Charger Données</button>
                 </div>
                 <button onclick="restoreFromLocalBackup()" style="padding: 5px; font-size: 10px; background: #ffc107; color: #856404; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Restaurer Sauvegarde Locale</button>
+                <button onclick="showRestoreOptions()" style="padding: 5px; font-size: 10px; background: #17a2b8; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Historique des Sauvegardes</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px;">
+                    <button onclick="exportDataAsJSON()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px;">Export JSON</button>
+                    <button onclick="importDataFromJSON()" style="padding: 5px; font-size: 10px; background: #fd7e14; color: white; border: none; border-radius: 3px;">Import JSON</button>
+                </div>
                 <button onclick="showWebAppInstructions()" style="padding: 5px; font-size: 10px; background: #6f42c1; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Infos Sync Complète</button>
             </div>
         </div>
@@ -597,8 +602,10 @@
                 document.getElementById('webAppUrl').value = config.webAppUrl || '';
             }
             
-            // Charger la sauvegarde locale au démarrage si pas de config Google Sheets
-            if (!config.sheetId || !config.apiKey) {
+            // Charger les données avec le système sécurisé
+            const loaded = loadDataSecurely();
+            if (!loaded) {
+                // Si aucune donnée sécurisée, essayer l'ancien système
                 restoreFromLocalBackup();
             }
         }
@@ -760,46 +767,36 @@
                 console.log('Données à envoyer:', dataToSend);
 
                 // Tentative de sauvegarde via Google Apps Script Web App
-                // Tentative de sauvegarde via Google Apps Script Web App
-if (config.webAppUrl) {
-    console.log('Envoi vers:', config.webAppUrl);
-    
-    // Utiliser une approche qui gère mieux CORS
-    const response = await fetch(config.webAppUrl, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(dataToSend)
-    });
-    
-    console.log('Statut de réponse:', response.status);
-    
-    if (response.ok) {
-        try {
-            const responseText = await response.text();
-            let responseData;
-            
-            // Essayer de parser JSON, sinon utiliser le texte brut
-            try {
-                responseData = JSON.parse(responseText);
-            } catch {
-                responseData = { success: true, message: responseText };
-            }
-            
-            console.log('Réponse du serveur:', responseData);
-            
-            if (responseData.success || responseText === 'OK') {
-                updateSyncStatus('success', 'Sauvegardé Google Sheets');
-                return;
-            }
-        } catch (parseError) {
-            console.log('Réponse texte:', await response.text());
-            updateSyncStatus('success', 'Sauvegardé (réponse simple)');
-            return;
-        }
-    }
-}
+                if (config.webAppUrl) {
+                    console.log('Envoi vers:', config.webAppUrl);
+                    
+                    const response = await fetch(config.webAppUrl, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(dataToSend)
+                    });
+                    
+                    console.log('Statut de réponse:', response.status);
+                    
+                    if (response.ok) {
+                        const responseData = await response.json();
+                        console.log('Réponse du serveur:', responseData);
+                        
+                        if (responseData.success) {
+                            updateSyncStatus('success', 'Sauvegardé Google Sheets');
+                            return;
+                        } else {
+                            console.error('Erreur serveur:', responseData.error);
+                            updateSyncStatus('error', 'Erreur: ' + responseData.error);
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        console.error('Erreur HTTP:', response.status, errorText);
+                        updateSyncStatus('error', `Erreur HTTP ${response.status}`);
+                    }
+                }
                 
                 // Fallback: sauvegarder localement avec message informatif
                 localStorage.setItem('treasuryBackup', JSON.stringify({ transactions, members, timestamp: new Date().toISOString() }));
@@ -887,20 +884,230 @@ if (config.webAppUrl) {
             modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
         }
 
-        // Fonction de restauration depuis la sauvegarde locale
-        function restoreFromLocalBackup() {
-            const backup = localStorage.getItem('treasuryBackup');
-            if (backup) {
-                try {
-                    const data = JSON.parse(backup);
-                    if (data.transactions) transactions = data.transactions;
-                    if (data.members) members = data.members;
+        // Système de sauvegarde multi-niveaux
+        function saveDataSecurely() {
+            const timestamp = new Date().toISOString();
+            const dataToSave = {
+                transactions,
+                members,
+                timestamp,
+                version: '1.0'
+            };
+            
+            try {
+                // 1. Sauvegarde principale
+                localStorage.setItem('treasuryData', JSON.stringify(dataToSave));
+                
+                // 2. Sauvegarde de secours (backup)
+                localStorage.setItem('treasuryBackup', JSON.stringify(dataToSave));
+                
+                // 3. Sauvegarde historique (garde les 5 dernières versions)
+                const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
+                history.push(dataToSave);
+                
+                // Garder seulement les 5 dernières sauvegardes
+                if (history.length > 5) {
+                    history.shift(); // Supprimer la plus ancienne
+                }
+                
+                localStorage.setItem('treasuryHistory', JSON.stringify(history));
+                
+                // 4. Export automatique en JSON téléchargeable
+                if (Math.random() < 0.1) { // 10% de chance à chaque sauvegarde
+                    createAutoBackupFile();
+                }
+                
+                console.log('Données sauvegardées de manière sécurisée');
+                
+            } catch (error) {
+                console.error('Erreur de sauvegarde sécurisée:', error);
+                alert('Attention: Erreur de sauvegarde des données!');
+            }
+        }
+
+        // Créer un fichier de sauvegarde automatique téléchargeable
+        function createAutoBackupFile() {
+            try {
+                const dataToSave = {
+                    transactions,
+                    members,
+                    timestamp: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                const jsonData = JSON.stringify(dataToSave, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tresorerie_backup_${new Date().toISOString().split('T')[0]}.json`;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                console.log('Fichier de sauvegarde automatique créé');
+                
+            } catch (error) {
+                console.error('Erreur création fichier backup:', error);
+            }
+        }
+
+        // Charger les données avec système de récupération
+        function loadDataSecurely() {
+            try {
+                // 1. Essayer la sauvegarde principale
+                let data = localStorage.getItem('treasuryData');
+                
+                if (!data) {
+                    // 2. Essayer la sauvegarde de secours
+                    data = localStorage.getItem('treasuryBackup');
+                    console.log('Données récupérées depuis le backup');
+                }
+                
+                if (!data) {
+                    // 3. Essayer l'historique (dernière version)
+                    const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
+                    if (history.length > 0) {
+                        data = JSON.stringify(history[history.length - 1]);
+                        console.log('Données récupérées depuis l\'historique');
+                    }
+                }
+                
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    if (parsed.transactions) transactions = parsed.transactions;
+                    if (parsed.members) members = parsed.members;
+                    
                     updateUI();
                     updateSyncStatus('success', 'Données restaurées');
-                } catch (error) {
-                    console.error('Erreur de restauration:', error);
+                    
+                    return true;
                 }
+                
+                return false;
+                
+            } catch (error) {
+                console.error('Erreur de chargement sécurisé:', error);
+                return false;
             }
+        }
+
+        // Fonction de restauration depuis l'historique
+        function showRestoreOptions() {
+            try {
+                const history = JSON.parse(localStorage.getItem('treasuryHistory') || '[]');
+                
+                if (history.length === 0) {
+                    alert('Aucun historique de sauvegarde disponible');
+                    return;
+                }
+                
+                let options = 'Sélectionnez une sauvegarde à restaurer:\n\n';
+                history.forEach((backup, index) => {
+                    const date = new Date(backup.timestamp).toLocaleString('fr-FR');
+                    const transCount = backup.transactions ? backup.transactions.length : 0;
+                    const memberCount = backup.members ? backup.members.length : 0;
+                    options += `${index + 1}. ${date} (${transCount} transactions, ${memberCount} membres)\n`;
+                });
+                
+                const choice = prompt(options + '\nEntrez le numéro (1-' + history.length + '):');
+                const index = parseInt(choice) - 1;
+                
+                if (index >= 0 && index < history.length) {
+                    const backup = history[index];
+                    transactions = backup.transactions || [];
+                    members = backup.members || [];
+                    
+                    updateUI();
+                    saveDataSecurely(); // Sauvegarder la restauration
+                    
+                    alert('Données restaurées avec succès!');
+                } else {
+                    alert('Sélection invalide');
+                }
+                
+            } catch (error) {
+                console.error('Erreur restauration:', error);
+                alert('Erreur lors de la restauration');
+            }
+        }
+
+        // Export des données en JSON
+        function exportDataAsJSON() {
+            try {
+                const dataToExport = {
+                    transactions,
+                    members,
+                    exportDate: new Date().toISOString(),
+                    version: '1.0'
+                };
+                
+                const jsonData = JSON.stringify(dataToExport, null, 2);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tresorerie_export_${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('Données exportées en JSON avec succès!');
+                
+            } catch (error) {
+                console.error('Erreur export JSON:', error);
+                alert('Erreur lors de l\'export');
+            }
+        }
+
+        // Import des données depuis un fichier JSON
+        function importDataFromJSON() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        if (importedData.transactions && importedData.members) {
+                            const confirm = window.confirm(
+                                `Importer ${importedData.transactions.length} transactions et ${importedData.members.length} membres?\n\n` +
+                                'ATTENTION: Ceci remplacera toutes vos données actuelles!'
+                            );
+                            
+                            if (confirm) {
+                                transactions = importedData.transactions;
+                                members = importedData.members;
+                                
+                                updateUI();
+                                saveDataSecurely();
+                                
+                                alert('Données importées avec succès!');
+                            }
+                        } else {
+                            alert('Fichier JSON invalide - format non reconnu');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Erreur import:', error);
+                        alert('Erreur: Fichier JSON invalide');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
         }
 
         function startAutoSync() {
@@ -991,7 +1198,7 @@ if (config.webAppUrl) {
 
             transactions.push(newTransaction);
             updateUI();
-            saveToSheet();
+            saveDataSecurely(); // Sauvegarde sécurisée
             
             this.reset();
             setCurrentDate();
@@ -1013,7 +1220,7 @@ if (config.webAppUrl) {
 
             members.push(newMember);
             updateUI();
-            saveToSheet();
+            saveDataSecurely(); // Sauvegarde sécurisée
             
             this.reset();
         });
@@ -1094,7 +1301,7 @@ if (config.webAppUrl) {
                 member.timestamp = new Date().toISOString();
                 
                 updateUI();
-                saveToSheet();
+                saveDataSecurely(); // Sauvegarde sécurisée
             }
         }
 
@@ -1119,7 +1326,7 @@ if (config.webAppUrl) {
             });
             
             updateUI();
-            saveToSheet();
+            saveDataSecurely(); // Sauvegarde sécurisée
         }
 
         // Fonction pour supprimer une transaction
@@ -1131,7 +1338,7 @@ if (config.webAppUrl) {
                 if (index !== -1) {
                     transactions.splice(index, 1);
                     updateUI();
-                    saveToSheet();
+                    saveDataSecurely(); // Sauvegarde sécurisée
                 }
             }
         }
@@ -1162,7 +1369,7 @@ if (config.webAppUrl) {
                 if (memberIndex !== -1) {
                     members.splice(memberIndex, 1);
                     updateUI();
-                    saveToSheet();
+                    saveDataSecurely(); // Sauvegarde sécurisée
                 }
             }
         }
