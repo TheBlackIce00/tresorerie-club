@@ -6,10 +6,9 @@
     <title>Trésorerie Club</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     
     <style>
         * {
@@ -31,6 +30,95 @@
             min-height: 100vh;
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        /* Login Screen */
+        .login-screen {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .login-box h1 {
+            text-align: center;
+            color: #4285f4;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .login-box p {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #4285f4;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            background: #3367d6;
+            transform: translateY(-2px);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .app-screen {
+            display: none;
+        }
+
+        .app-screen.active {
+            display: block;
         }
 
         .header {
@@ -56,15 +144,41 @@
             font-size: 14px;
         }
 
-        .sync-status {
+        .user-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+        }
+
+        .logout-btn {
             position: absolute;
             top: 10px;
             right: 10px;
+            padding: 5px 15px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            border-radius: 15px;
+            font-size: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .sync-status {
+            margin-top: 10px;
             padding: 5px 10px;
             border-radius: 20px;
             font-size: 10px;
             background: rgba(255,255,255,0.2);
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 5px;
         }
@@ -72,25 +186,6 @@
         .sync-success { background: rgba(40, 167, 69, 0.8); }
         .sync-error { background: rgba(220, 53, 69, 0.8); }
         .sync-loading { background: rgba(255, 193, 7, 0.8); }
-
-        .admin-panel {
-            background: rgba(255,255,255,0.1);
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 10px;
-            display: none;
-        }
-
-        .admin-panel.show { display: block; }
-
-        .admin-input {
-            width: 100%;
-            padding: 5px;
-            margin: 5px 0;
-            border: none;
-            border-radius: 5px;
-            font-size: 10px;
-        }
 
         .tabs {
             display: flex;
@@ -369,27 +464,47 @@
             .export-buttons {
                 grid-template-columns: 1fr;
             }
+
+            .login-box {
+                padding: 30px 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <!-- Écran de connexion -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>🔐 Trésorerie Club</h1>
+            <p>Connexion sécurisée requise</p>
+            
+            <div id="loginError" class="error-message" style="display: none;"></div>
+            
+            <form id="loginForm">
+                <input type="email" id="emailInput" class="login-input" placeholder="Email" required>
+                <input type="password" id="passwordInput" class="login-input" placeholder="Mot de passe" required>
+                <button type="submit" class="login-btn" id="loginBtn">Se connecter</button>
+            </form>
+            
+            <div style="text-align: center; margin-top: 20px; font-size: 12px; color: #666;">
+                <p>Première connexion ?</p>
+                <p>Créez votre compte Firebase puis configurez l'app</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écran principal de l'application -->
+    <div class="container app-screen" id="appScreen">
         <div class="header">
+            <div class="user-info" id="userInfo">👤 Utilisateur</div>
+            <button class="logout-btn" onclick="logout()">Déconnexion</button>
+            
+            <h1>💰 Trésorerie Club</h1>
+            <p>Gestion sécurisée avec Firebase</p>
+            
             <div class="sync-status" id="syncStatus">
                 <span class="loading"></span>
                 <span>Connexion...</span>
-            </div>
-            <h1>💰 Trésorerie Club</h1>
-            <p>Gestion financière avec Firebase</p>
-            <p style="font-size: 10px; opacity: 0.7; cursor: pointer;" onclick="toggleAdminPanel()">⚙️ Configuration Firebase</p>
-            
-            <div class="admin-panel" id="adminPanel">
-                <input type="text" class="admin-input" id="projectId" placeholder="Project ID Firebase">
-                <input type="text" class="admin-input" id="apiKey" placeholder="Clé API Firebase">
-                <input type="password" class="admin-input" id="adminPassword" placeholder="Mot de passe admin">
-                <button onclick="saveFirebaseConfig()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">Connecter Firebase</button>
-                <button onclick="exportTransactionsPDF()" style="padding: 5px; font-size: 10px; background: #28a745; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">📋 Export PDF</button>
-                <button onclick="showFirebaseStatus()" style="padding: 5px; font-size: 10px; background: #17a2b8; color: white; border: none; border-radius: 3px; width: 100%; margin-top: 5px;">📊 Statut Firebase</button>
             </div>
         </div>
 
@@ -449,11 +564,11 @@
                     </div>
                     <div class="form-group">
                         <label>Description</label>
-                        <input type="text" id="description" placeholder="Description de la transaction" required>
+                        <input type="text" id="description" placeholder="Description de la transaction" required minlength="3" maxlength="100">
                     </div>
                     <div class="form-group">
                         <label>Montant (DT)</label>
-                        <input type="number" id="amount" step="0.01" placeholder="0.00" required>
+                        <input type="number" id="amount" step="0.01" placeholder="0.00" required min="0.01" max="1000000">
                     </div>
                     <div class="form-group">
                         <label>Catégorie</label>
@@ -489,15 +604,15 @@
                 <form id="addMemberForm">
                     <div class="form-group">
                         <label>Nom</label>
-                        <input type="text" id="lastName" placeholder="Nom de famille" required>
+                        <input type="text" id="lastName" placeholder="Nom de famille" required minlength="2" maxlength="50">
                     </div>
                     <div class="form-group">
                         <label>Prénom</label>
-                        <input type="text" id="firstName" placeholder="Prénom" required>
+                        <input type="text" id="firstName" placeholder="Prénom" required minlength="2" maxlength="50">
                     </div>
                     <div class="form-group">
                         <label>Montant Cotisation (DT)</label>
-                        <input type="number" id="membershipAmount" step="0.01" placeholder="0.00" required>
+                        <input type="number" id="membershipAmount" step="0.01" placeholder="0.00" required min="0.01" max="10000">
                     </div>
                     <button type="submit" class="btn btn-primary">👤 Ajouter Membre</button>
                 </form>
@@ -532,333 +647,150 @@
     </div>
 
     <script>
-        // Configuration Firebase avec validation
-        let firebaseConfig = {};
-        let db;
-        let isFirebaseConnected = false;
+        // Configuration Firebase - À PERSONNALISER
+        const firebaseConfig = {
+            apiKey: "VOTRE_API_KEY",
+            authDomain: "votre-projet.firebaseapp.com",
+            projectId: "votre-projet",
+            storageBucket: "votre-projet.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
 
-        // Données locales
+        // Variables globales
+        let db;
+        let currentUser = null;
         let transactions = [];
         let members = [];
+        let unsubscribeTransactions;
+        let unsubscribeMembers;
 
         // Initialisation Firebase
-        function initFirebase() {
-            const saved = localStorage.getItem('firebaseConfig');
-            if (saved) {
-                try {
-                    firebaseConfig = JSON.parse(saved);
-                    
-                    // Vérifier si Firebase est déjà initialisé
-                    if (firebase.apps.length === 0) {
-                        firebase.initializeApp(firebaseConfig);
-                    }
-                    
-                    db = firebase.firestore();
-                    isFirebaseConnected = true;
-                    
-                    updateSyncStatus('success', 'Firebase connecté');
-                    loadDataFromFirebase();
-                    
-                    // Remplir les champs de configuration
-                    document.getElementById('projectId').value = firebaseConfig.projectId;
-                    document.getElementById('apiKey').value = firebaseConfig.apiKey;
-                    
-                } catch (error) {
-                    console.error('Erreur Firebase:', error);
-                    updateSyncStatus('error', 'Erreur Firebase: ' + error.message);
-                    loadLocalData(); // Fallback vers données locales
-                }
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // Écouteur d'état d'authentification
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                showApp();
+                document.getElementById('userInfo').textContent = user.email.split('@')[0];
+                setupRealtimeListeners();
             } else {
-                updateSyncStatus('error', 'Firebase non configuré');
-                loadLocalData(); // Charger données locales si pas de Firebase
+                currentUser = null;
+                showLogin();
+                cleanupListeners();
             }
-        }
+        });
 
-        // Chargement des données locales en fallback
-        function loadLocalData() {
-            const saved = localStorage.getItem('treasuryData');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    if (data.transactions) transactions = data.transactions;
-                    if (data.members) members = data.members;
-                    updateUI();
-                    updateSyncStatus('success', 'Données locales chargées');
-                } catch (error) {
-                    console.error('Erreur chargement local:', error);
-                }
-            }
-        }
-
-        // Sauvegarde locale en fallback
-        function saveLocalData() {
+        // Gestion de la connexion
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('emailInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorDiv = document.getElementById('loginError');
+            
+            errorDiv.style.display = 'none';
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Connexion...';
+            
             try {
-                const data = {
-                    transactions,
-                    members,
-                    timestamp: new Date().toISOString()
-                };
-                localStorage.setItem('treasuryData', JSON.stringify(data));
+                await auth.signInWithEmailAndPassword(email, password);
             } catch (error) {
-                console.error('Erreur sauvegarde locale:', error);
+                console.error('Erreur connexion:', error);
+                errorDiv.textContent = getErrorMessage(error.code);
+                errorDiv.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Se connecter';
             }
-        }
+        });
 
-        // Configuration Firebase améliorée
-        function saveFirebaseConfig() {
-            const projectId = document.getElementById('projectId').value.trim();
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const password = document.getElementById('adminPassword').value;
-            
-            if (password !== 'admin123') {
-                alert('Mot de passe incorrect');
-                return;
-            }
-            
-            if (!projectId || !apiKey) {
-                alert('Veuillez remplir le Project ID et l\'API Key');
-                return;
-            }
-            
-            // Validation basique des formats
-            if (!projectId.match(/^[a-z0-9-]+$/)) {
-                alert('Project ID invalide (doit contenir uniquement des lettres minuscules, chiffres et tirets)');
-                return;
-            }
-            
-            firebaseConfig = {
-                apiKey: apiKey,
-                authDomain: projectId + '.firebaseapp.com',
-                projectId: projectId,
-                storageBucket: projectId + '.appspot.com',
-                messagingSenderId: '123456789',
-                appId: '1:123456789:web:abcdef'
+        // Messages d'erreur en français
+        function getErrorMessage(code) {
+            const messages = {
+                'auth/invalid-email': 'Email invalide',
+                'auth/user-disabled': 'Compte désactivé',
+                'auth/user-not-found': 'Aucun compte trouvé',
+                'auth/wrong-password': 'Mot de passe incorrect',
+                'auth/too-many-requests': 'Trop de tentatives, réessayez plus tard',
+                'auth/network-request-failed': 'Erreur réseau'
             };
-            
-            localStorage.setItem('firebaseConfig', JSON.stringify(firebaseConfig));
-            
-            try {
-                // Réinitialiser Firebase si déjà configuré
-                if (firebase.apps.length > 0) {
-                    firebase.app().delete().then(() => {
-                        firebase.initializeApp(firebaseConfig);
-                        db = firebase.firestore();
-                        isFirebaseConnected = true;
-                        testFirebaseConnection();
-                    });
-                } else {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.firestore();
-                    isFirebaseConnected = true;
-                    testFirebaseConnection();
-                }
-                
-                toggleAdminPanel();
-                
-            } catch (error) {
-                console.error('Erreur configuration Firebase:', error);
-                updateSyncStatus('error', 'Erreur: ' + error.message);
-                alert('Erreur de configuration Firebase: ' + error.message);
-            }
+            return messages[code] || 'Erreur de connexion';
         }
 
-        // Test de connexion Firebase
-        async function testFirebaseConnection() {
-            updateSyncStatus('loading', 'Test connexion...');
-            
-            try {
-                // Tenter d'écrire un document de test
-                await db.collection('test').doc('connection').set({
-                    test: true,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                
-                // Supprimer le document de test
-                await db.collection('test').doc('connection').delete();
-                
-                updateSyncStatus('success', 'Firebase connecté et testé');
-                loadDataFromFirebase();
-                
-            } catch (error) {
-                console.error('Test connexion échoué:', error);
-                updateSyncStatus('error', 'Test échoué: ' + error.message);
-                isFirebaseConnected = false;
-            }
-        }
-
-        // Charger données depuis Firebase avec retry
-        async function loadDataFromFirebase() {
-            if (!isFirebaseConnected) {
-                loadLocalData();
-                return;
-            }
-            
-            updateSyncStatus('loading', 'Chargement...');
-            
-            let retryCount = 0;
-            const maxRetries = 3;
-            
-            while (retryCount < maxRetries) {
+        // Déconnexion
+        async function logout() {
+            if (confirm('Voulez-vous vraiment vous déconnecter ?')) {
                 try {
-                    // Charger transactions avec gestion d'erreur
-                    const transactionsSnapshot = await db.collection('transactions')
-                        .orderBy('timestamp', 'desc')
-                        .limit(100)
-                        .get();
-                    
-                    transactions = transactionsSnapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data(),
-                        // Convertir Timestamp en string si nécessaire
-                        date: doc.data().date || new Date().toISOString().split('T')[0],
-                        timestamp: doc.data().timestamp || new Date()
-                    }));
-                    
-                    // Charger membres avec gestion d'erreur
-                    const membersSnapshot = await db.collection('members')
-                        .limit(100)
-                        .get();
-                    
-                    members = membersSnapshot.docs.map(doc => ({
+                    await auth.signOut();
+                } catch (error) {
+                    console.error('Erreur déconnexion:', error);
+                }
+            }
+        }
+
+        // Affichage des écrans
+        function showLogin() {
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appScreen').classList.remove('active');
+        }
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appScreen').classList.add('active');
+            setCurrentDate();
+        }
+
+        // Écouteurs temps réel Firebase
+        function setupRealtimeListeners() {
+            if (!currentUser) return;
+            
+            updateSyncStatus('loading', 'Synchronisation...');
+            
+            // Écouter les transactions en temps réel
+            unsubscribeTransactions = db.collection('transactions')
+                .where('userId', '==', currentUser.uid)
+                .orderBy('createdAt', 'desc')
+                .limit(100)
+                .onSnapshot(snapshot => {
+                    transactions = snapshot.docs.map(doc => ({
                         id: doc.id,
                         ...doc.data()
                     }));
-                    
-                    // Sauvegarder localement comme backup
-                    saveLocalData();
-                    
                     updateUI();
-                    updateSyncStatus('success', `Synchronisé (${transactions.length} transactions, ${members.length} membres)`);
-                    return;
-                    
-                } catch (error) {
-                    retryCount++;
-                    console.error(`Erreur chargement (tentative ${retryCount}):`, error);
-                    
-                    if (retryCount < maxRetries) {
-                        updateSyncStatus('loading', `Retry ${retryCount}/${maxRetries}...`);
-                        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-                    } else {
-                        updateSyncStatus('error', 'Erreur chargement - Mode local');
-                        loadLocalData(); // Fallback vers données locales
-                        return;
-                    }
-                }
-            }
+                    updateSyncStatus('success', 'Synchronisé');
+                }, error => {
+                    console.error('Erreur sync transactions:', error);
+                    updateSyncStatus('error', 'Erreur sync');
+                });
+            
+            // Écouter les membres en temps réel
+            unsubscribeMembers = db.collection('members')
+                .where('userId', '==', currentUser.uid)
+                .limit(100)
+                .onSnapshot(snapshot => {
+                    members = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data()
+                    }));
+                    updateUI();
+                }, error => {
+                    console.error('Erreur sync membres:', error);
+                });
         }
 
-        // Sauvegarder vers Firebase avec retry et fallback
-        async function saveToFirebase(collection, data, id = null) {
-            if (!isFirebaseConnected) {
-                console.log('Firebase non connecté, sauvegarde locale uniquement');
-                saveLocalData();
-                return true;
-            }
-            
-            updateSyncStatus('loading', 'Sauvegarde...');
-            
-            try {
-                if (id) {
-                    await db.collection(collection).doc(id).set(data, { merge: true });
-                } else {
-                    const docRef = await db.collection(collection).add(data);
-                    return docRef.id;
-                }
-                
-                // Sauvegarder localement aussi
-                saveLocalData();
-                updateSyncStatus('success', 'Sauvegardé');
-                return true;
-                
-            } catch (error) {
-                console.error('Erreur sauvegarde Firebase:', error);
-                updateSyncStatus('error', 'Erreur - Sauvegarde locale');
-                
-                // Fallback: sauvegarder localement
-                saveLocalData();
-                
-                // Si c'est un problème de permissions, suggérer une solution
-                if (error.code === 'permission-denied') {
-                    alert('Erreur de permissions Firebase. Vérifiez les règles de sécurité de votre base de données.');
-                }
-                
-                return false;
-            }
+        // Nettoyer les écouteurs
+        function cleanupListeners() {
+            if (unsubscribeTransactions) unsubscribeTransactions();
+            if (unsubscribeMembers) unsubscribeMembers();
+            transactions = [];
+            members = [];
         }
 
-        // Validation des données
-        function validateTransaction(data) {
-            const errors = [];
-            
-            if (!data.type || !['recette', 'depense'].includes(data.type)) {
-                errors.push('Type de transaction invalide');
-            }
-            
-            if (!data.description || data.description.trim().length < 3) {
-                errors.push('Description trop courte (minimum 3 caractères)');
-            }
-            
-            if (!data.amount || data.amount <= 0 || data.amount > 1000000) {
-                errors.push('Montant invalide (doit être entre 0.01 et 1,000,000)');
-            }
-            
-            if (!data.category || data.category.trim().length === 0) {
-                errors.push('Catégorie requise');
-            }
-            
-            if (!data.date || !data.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                errors.push('Date invalide');
-            }
-            
-            return errors;
-        }
-
-        function validateMember(data) {
-            const errors = [];
-            
-            if (!data.firstName || data.firstName.trim().length < 2) {
-                errors.push('Prénom trop court (minimum 2 caractères)');
-            }
-            
-            if (!data.lastName || data.lastName.trim().length < 2) {
-                errors.push('Nom trop court (minimum 2 caractères)');
-            }
-            
-            if (!data.amount || data.amount <= 0 || data.amount > 10000) {
-                errors.push('Montant cotisation invalide (doit être entre 0.01 et 10,000)');
-            }
-            
-            // Vérifier doublons
-            const exists = members.some(m => 
-                m.firstName.toLowerCase().trim() === data.firstName.toLowerCase().trim() && 
-                m.lastName.toLowerCase().trim() === data.lastName.toLowerCase().trim()
-            );
-            
-            if (exists) {
-                errors.push('Ce membre existe déjà');
-            }
-            
-            return errors;
-        }
-
-        // Fonction utilitaire pour afficher les erreurs
-        function showErrors(errors) {
-            if (errors.length > 0) {
-                alert('Erreurs détectées:\n• ' + errors.join('\n• '));
-                return false;
-            }
-            return true;
-        }
-
-        // Formatage sécurisé des montants
-        function formatAmount(amount) {
-            return parseFloat(amount).toFixed(2);
-        }
-
-        // Nettoyage des chaînes
-        function sanitizeString(str) {
-            return str.trim().replace(/[<>]/g, '');
-        }
+        // Mise à jour du statut
         function updateSyncStatus(type, message) {
             const statusEl = document.getElementById('syncStatus');
             statusEl.className = `sync-status sync-${type}`;
@@ -871,11 +803,12 @@
             statusEl.innerHTML = `${icon} <span>${message}</span>`;
         }
 
-        function toggleAdminPanel() {
-            const panel = document.getElementById('adminPanel');
-            panel.classList.toggle('show');
+        // Validation et nettoyage
+        function sanitize(str) {
+            return str.trim().replace(/[<>]/g, '');
         }
 
+        // Navigation
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
@@ -883,7 +816,6 @@
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-
             document.getElementById(tabName).classList.add('active');
             event.target.classList.add('active');
         }
@@ -917,14 +849,14 @@
             document.getElementById('currentBalance').textContent = currentBalance.toFixed(2) + ' DT';
 
             const recentTransactions = transactions.slice(0, 3);
-            const recentTransactionsHTML = recentTransactions.length > 0 ? recentTransactions.map(transaction => `
+            const recentTransactionsHTML = recentTransactions.length > 0 ? recentTransactions.map(t => `
                 <div class="transaction-item">
                     <div class="transaction-info">
-                        <h4>${transaction.description}</h4>
-                        <p>${transaction.category} • ${transaction.date}</p>
+                        <h4>${t.description}</h4>
+                        <p>${t.category} • ${t.date}</p>
                     </div>
-                    <div class="transaction-amount ${transaction.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
-                        ${transaction.type === 'recette' ? '+' : '-'}${transaction.amount.toFixed(2)} DT
+                    <div class="transaction-amount ${t.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
+                        ${t.type === 'recette' ? '+' : '-'}${t.amount.toFixed(2)} DT
                     </div>
                 </div>
             `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune transaction</p>';
@@ -932,259 +864,222 @@
             document.getElementById('recentTransactions').innerHTML = recentTransactionsHTML;
         }
 
-        // Événements des formulaires avec validation
-        document.getElementById('addTransactionForm').addEventListener('submit', async function(e) {
+        // Formulaire transaction
+        document.getElementById('addTransactionForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = {
-                type: document.getElementById('transactionType').value,
-                description: sanitizeString(document.getElementById('description').value),
-                amount: parseFloat(document.getElementById('amount').value),
-                category: sanitizeString(document.getElementById('category').value),
-                date: document.getElementById('transactionDate').value
-            };
+            if (!currentUser) return;
             
-            // Validation
-            const errors = validateTransaction(formData);
-            if (!showErrors(errors)) return;
-            
-            // Désactiver le bouton pendant la sauvegarde
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '💾 Ajout en cours...';
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '💾 Ajout...';
             
             try {
-                const newTransaction = {
-                    ...formData,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    created: new Date().toISOString()
+                const data = {
+                    userId: currentUser.uid,
+                    type: document.getElementById('transactionType').value,
+                    description: sanitize(document.getElementById('description').value),
+                    amount: parseFloat(document.getElementById('amount').value),
+                    category: sanitize(document.getElementById('category').value),
+                    date: document.getElementById('transactionDate').value,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: currentUser.email
                 };
-
-                // Ajouter localement d'abord pour une réponse instantanée
-                const tempId = 'temp_' + Date.now();
-                transactions.unshift({ ...newTransaction, id: tempId });
-                updateUI();
                 
-                // Sauvegarder vers Firebase
-                const savedId = await saveToFirebase('transactions', newTransaction);
-                
-                if (savedId) {
-                    // Remplacer l'ID temporaire par l'ID Firebase
-                    const tempIndex = transactions.findIndex(t => t.id === tempId);
-                    if (tempIndex !== -1) {
-                        transactions[tempIndex].id = savedId;
-                    }
-                }
-                
-                this.reset();
+                await db.collection('transactions').add(data);
+                e.target.reset();
                 setCurrentDate();
                 
             } catch (error) {
-                console.error('Erreur ajout transaction:', error);
-                alert('Erreur lors de l\'ajout de la transaction');
+                console.error('Erreur ajout:', error);
+                alert('Erreur lors de l\'ajout');
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         });
 
-        document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
+        // Formulaire membre
+        document.getElementById('addMemberForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const formData = {
-                firstName: sanitizeString(document.getElementById('firstName').value),
-                lastName: sanitizeString(document.getElementById('lastName').value),
-                amount: parseFloat(document.getElementById('membershipAmount').value),
-                paid: false
-            };
+            if (!currentUser) return;
             
-            // Validation
-            const errors = validateMember(formData);
-            if (!showErrors(errors)) return;
-            
-            // Désactiver le bouton pendant la sauvegarde
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const originalText = submitBtn.textContent;
-            submitBtn.disabled = true;
-            submitBtn.textContent = '👤 Ajout en cours...';
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = '👤 Ajout...';
             
             try {
-                const newMember = {
-                    ...formData,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    created: new Date().toISOString()
+                const data = {
+                    userId: currentUser.uid,
+                    firstName: sanitize(document.getElementById('firstName').value),
+                    lastName: sanitize(document.getElementById('lastName').value),
+                    amount: parseFloat(document.getElementById('membershipAmount').value),
+                    paid: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: currentUser.email
                 };
-
-                // Ajouter localement d'abord
-                const tempId = 'temp_' + Date.now();
-                members.push({ ...newMember, id: tempId });
-                updateUI();
                 
-                // Sauvegarder vers Firebase
-                const savedId = await saveToFirebase('members', newMember);
-                
-                if (savedId) {
-                    // Remplacer l'ID temporaire par l'ID Firebase
-                    const tempIndex = members.findIndex(m => m.id === tempId);
-                    if (tempIndex !== -1) {
-                        members[tempIndex].id = savedId;
-                    }
-                }
-                
-                this.reset();
+                await db.collection('members').add(data);
+                e.target.reset();
                 
             } catch (error) {
-                console.error('Erreur ajout membre:', error);
-                alert('Erreur lors de l\'ajout du membre');
+                console.error('Erreur ajout:', error);
+                alert('Erreur lors de l\'ajout');
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = originalText;
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         });
 
         function renderTransactions() {
-            const transactionsHTML = transactions.length > 0 ? transactions.map(transaction => `
+            const html = transactions.length > 0 ? transactions.map(t => `
                 <div class="transaction-item">
                     <div class="transaction-info">
-                        <h4>${transaction.description}</h4>
-                        <p>${transaction.category} • ${transaction.date}</p>
+                        <h4>${t.description}</h4>
+                        <p>${t.category} • ${t.date}</p>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <div class="transaction-amount ${transaction.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
-                            ${transaction.type === 'recette' ? '+' : '-'}${transaction.amount.toFixed(2)} DT
+                        <div class="transaction-amount ${t.type === 'recette' ? 'amount-positive' : 'amount-negative'}">
+                            ${t.type === 'recette' ? '+' : '-'}${t.amount.toFixed(2)} DT
                         </div>
-                        <button onclick="deleteTransaction('${transaction.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 12px;" title="Supprimer">×</button>
+                        <button onclick="deleteTransaction('${t.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; font-size: 12px;">×</button>
                     </div>
                 </div>
             `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune transaction</p>';
             
-            document.getElementById('allTransactions').innerHTML = transactionsHTML;
+            document.getElementById('allTransactions').innerHTML = html;
         }
 
         function renderMembers() {
-            const membersHTML = members.length > 0 ? members.map(member => `
+            const html = members.length > 0 ? members.map(m => `
                 <div class="member-item">
                     <div class="member-info">
-                        <h4>${member.firstName} ${member.lastName}</h4>
-                        <p>Cotisation: ${member.amount.toFixed(2)} DT</p>
+                        <h4>${m.firstName} ${m.lastName}</h4>
+                        <p>Cotisation: ${m.amount.toFixed(2)} DT</p>
                     </div>
                     <div style="display: flex; flex-direction: column; align-items: end; gap: 5px;">
                         <div style="display: flex; align-items: center; gap: 5px;">
-                            <span class="payment-status ${member.paid ? 'status-paid' : 'status-unpaid'}">
-                                ${member.paid ? '✅ Payé' : '❌ Non payé'}
+                            <span class="payment-status ${m.paid ? 'status-paid' : 'status-unpaid'}">
+                                ${m.paid ? '✅ Payé' : '❌ Non payé'}
                             </span>
-                            <button onclick="deleteMember('${member.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 10px;" title="Supprimer">×</button>
+                            <button onclick="deleteMember('${m.id}')" style="background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; cursor: pointer; font-size: 10px;">×</button>
                         </div>
-                        <button class="toggle-payment" onclick="togglePayment('${member.id}')">
-                            ${member.paid ? 'Marquer non payé' : 'Marquer payé'}
+                        <button class="toggle-payment" onclick="togglePayment('${m.id}')">
+                            ${m.paid ? 'Marquer non payé' : 'Marquer payé'}
                         </button>
                     </div>
                 </div>
             `).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucun membre</p>';
             
-            document.getElementById('membersList').innerHTML = membersHTML;
+            document.getElementById('membersList').innerHTML = html;
         }
 
         async function togglePayment(memberId) {
-            const memberIndex = members.findIndex(m => m.id === memberId);
-            const member = members[memberIndex];
+            const member = members.find(m => m.id === memberId);
+            if (!member || !currentUser) return;
             
-            if (member) {
+            try {
                 if (!member.paid) {
-                    const newTransaction = {
+                    await db.collection('transactions').add({
+                        userId: currentUser.uid,
                         type: 'recette',
                         description: `Cotisation - ${member.firstName} ${member.lastName}`,
                         amount: member.amount,
                         category: 'Cotisations',
                         date: new Date().toISOString().split('T')[0],
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    transactions.unshift(newTransaction);
-                    await saveToFirebase('transactions', newTransaction);
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        createdBy: currentUser.email
+                    });
                 }
                 
-                member.paid = !member.paid;
-                await saveToFirebase('members', member, memberId);
+                await db.collection('members').doc(memberId).update({
+                    paid: !member.paid
+                });
                 
-                updateUI();
+            } catch (error) {
+                console.error('Erreur toggle:', error);
+                alert('Erreur lors de la mise à jour');
             }
         }
 
         async function markAllPaid() {
-            for (let member of members) {
-                if (!member.paid) {
-                    const newTransaction = {
-                        type: 'recette',
-                        description: `Cotisation - ${member.firstName} ${member.lastName}`,
-                        amount: member.amount,
-                        category: 'Cotisations',
-                        date: new Date().toISOString().split('T')[0],
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    transactions.unshift(newTransaction);
-                    await saveToFirebase('transactions', newTransaction);
-                    
-                    member.paid = true;
-                    await saveToFirebase('members', member, member.id);
-                }
-            }
+            if (!currentUser || !confirm('Marquer tous les membres comme payés ?')) return;
             
-            updateUI();
-        }
-
-        async function deleteTransaction(transactionId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette transaction ?')) {
-                const index = transactions.findIndex(t => t.id === transactionId);
-                if (index !== -1) {
-                    transactions.splice(index, 1);
-                    updateUI();
-                    
-                    if (isFirebaseConnected) {
-                        await db.collection('transactions').doc(transactionId).delete();
+            try {
+                const batch = db.batch();
+                
+                for (const member of members) {
+                    if (!member.paid) {
+                        const transRef = db.collection('transactions').doc();
+                        batch.set(transRef, {
+                            userId: currentUser.uid,
+                            type: 'recette',
+                            description: `Cotisation - ${member.firstName} ${member.lastName}`,
+                            amount: member.amount,
+                            category: 'Cotisations',
+                            date: new Date().toISOString().split('T')[0],
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            createdBy: currentUser.email
+                        });
+                        
+                        const memberRef = db.collection('members').doc(member.id);
+                        batch.update(memberRef, { paid: true });
                     }
                 }
+                
+                await batch.commit();
+                
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la mise à jour');
             }
         }
 
-        async function deleteMember(memberId) {
-            const member = members.find(m => m.id === memberId);
-            if (member && confirm(`Êtes-vous sûr de vouloir supprimer ${member.firstName} ${member.lastName} ?`)) {
-                const memberIndex = members.findIndex(m => m.id === memberId);
-                if (memberIndex !== -1) {
-                    members.splice(memberIndex, 1);
-                    updateUI();
-                    
-                    if (isFirebaseConnected) {
-                        await db.collection('members').doc(memberId).delete();
-                    }
-                }
+        async function deleteTransaction(id) {
+            if (!confirm('Supprimer cette transaction ?')) return;
+            
+            try {
+                await db.collection('transactions').doc(id).delete();
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        async function deleteMember(id) {
+            const member = members.find(m => m.id === id);
+            if (!member || !confirm(`Supprimer ${member.firstName} ${member.lastName} ?`)) return;
+            
+            try {
+                await db.collection('members').doc(id).delete();
+            } catch (error) {
+                console.error('Erreur suppression:', error);
+                alert('Erreur lors de la suppression');
             }
         }
 
         function renderReports() {
             const categories = {};
             
-            transactions.forEach(transaction => {
-                if (!categories[transaction.category]) {
-                    categories[transaction.category] = {
-                        recettes: 0,
-                        depenses: 0
-                    };
+            transactions.forEach(t => {
+                if (!categories[t.category]) {
+                    categories[t.category] = { recettes: 0, depenses: 0 };
                 }
-                
-                if (transaction.type === 'recette') {
-                    categories[transaction.category].recettes += transaction.amount;
+                if (t.type === 'recette') {
+                    categories[t.category].recettes += t.amount;
                 } else {
-                    categories[transaction.category].depenses += transaction.amount;
+                    categories[t.category].depenses += t.amount;
                 }
             });
 
-            const reportHTML = Object.keys(categories).length > 0 ? Object.entries(categories).map(([category, data]) => {
+            const html = Object.keys(categories).length > 0 ? Object.entries(categories).map(([cat, data]) => {
                 const balance = data.recettes - data.depenses;
                 return `
                     <div class="report-item">
-                        <h4>${category}</h4>
+                        <h4>${cat}</h4>
                         <div class="report-details">
                             <span>Recettes: ${data.recettes.toFixed(2)} DT</span>
                             <span>Dépenses: ${data.depenses.toFixed(2)} DT</span>
@@ -1194,9 +1089,9 @@
                         </div>
                     </div>
                 `;
-            }).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune donnée pour le rapport</p>';
+            }).join('') : '<p style="text-align: center; color: #666; padding: 20px;">Aucune donnée</p>';
 
-            document.getElementById('categoryReport').innerHTML = reportHTML;
+            document.getElementById('categoryReport').innerHTML = html;
         }
 
         // Exports PDF
@@ -1205,15 +1100,14 @@
             const doc = new jsPDF();
 
             doc.setFontSize(20);
-            doc.text('Liste des Membres - Trésorerie Club', 20, 30);
-            
+            doc.text('Liste des Membres', 20, 30);
             doc.setFontSize(12);
-            doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+            doc.text(`Export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
 
-            const tableData = members.map(member => [
-                `${member.firstName} ${member.lastName}`,
-                `${member.amount.toFixed(2)} DT`,
-                member.paid ? 'Payé' : 'Non payé'
+            const tableData = members.map(m => [
+                `${m.firstName} ${m.lastName}`,
+                `${m.amount.toFixed(2)} DT`,
+                m.paid ? 'Payé' : 'Non payé'
             ]);
 
             doc.autoTable({
@@ -1225,18 +1119,15 @@
                 headStyles: { fillColor: [66, 133, 244] }
             });
 
-            const paidMembers = members.filter(m => m.paid).length;
-            const unpaidMembers = members.length - paidMembers;
-            const totalAmount = members.reduce((sum, m) => sum + (m.paid ? m.amount : 0), 0);
-
             const finalY = doc.lastAutoTable.finalY + 20;
-            doc.text(`Résumé:`, 20, finalY);
-            doc.text(`• Total membres: ${members.length}`, 25, finalY + 10);
-            doc.text(`• Membres ayant payé: ${paidMembers}`, 25, finalY + 20);
-            doc.text(`• Membres n'ayant pas payé: ${unpaidMembers}`, 25, finalY + 30);
-            doc.text(`• Total collecté: ${totalAmount.toFixed(2)} DT`, 25, finalY + 40);
+            const paid = members.filter(m => m.paid).length;
+            const total = members.reduce((sum, m) => sum + (m.paid ? m.amount : 0), 0);
+            
+            doc.text(`Total membres: ${members.length}`, 20, finalY);
+            doc.text(`Payés: ${paid}`, 20, finalY + 10);
+            doc.text(`Total collecté: ${total.toFixed(2)} DT`, 20, finalY + 20);
 
-            doc.save('liste_membres.pdf');
+            doc.save('membres.pdf');
         }
 
         function exportReportPDF() {
@@ -1244,51 +1135,21 @@
             const doc = new jsPDF();
 
             doc.setFontSize(20);
-            doc.text('Rapport Financier - Trésorerie Club', 20, 30);
-            
+            doc.text('Rapport Financier', 20, 30);
             doc.setFontSize(12);
-            doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+            doc.text(`Export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
 
             const totalIncome = transactions.filter(t => t.type === 'recette').reduce((sum, t) => sum + t.amount, 0);
             const totalExpenses = transactions.filter(t => t.type === 'depense').reduce((sum, t) => sum + t.amount, 0);
-            const balance = totalIncome - totalExpenses;
 
             doc.setFontSize(14);
-            doc.text('Résumé Financier:', 20, 65);
+            doc.text('Résumé:', 20, 65);
             doc.setFontSize(12);
-            doc.text(`Total Recettes: ${totalIncome.toFixed(2)} DT`, 25, 80);
-            doc.text(`Total Dépenses: ${totalExpenses.toFixed(2)} DT`, 25, 90);
-            doc.text(`Solde Actuel: ${balance.toFixed(2)} DT`, 25, 100);
+            doc.text(`Recettes: ${totalIncome.toFixed(2)} DT`, 25, 80);
+            doc.text(`Dépenses: ${totalExpenses.toFixed(2)} DT`, 25, 90);
+            doc.text(`Solde: ${(totalIncome - totalExpenses).toFixed(2)} DT`, 25, 100);
 
-            const categories = {};
-            transactions.forEach(transaction => {
-                if (!categories[transaction.category]) {
-                    categories[transaction.category] = { recettes: 0, depenses: 0 };
-                }
-                if (transaction.type === 'recette') {
-                    categories[transaction.category].recettes += transaction.amount;
-                } else {
-                    categories[transaction.category].depenses += transaction.amount;
-                }
-            });
-
-            const tableData = Object.entries(categories).map(([category, data]) => [
-                category,
-                `${data.recettes.toFixed(2)} DT`,
-                `${data.depenses.toFixed(2)} DT`,
-                `${(data.recettes - data.depenses).toFixed(2)} DT`
-            ]);
-
-            doc.autoTable({
-                startY: 120,
-                head: [['Catégorie', 'Recettes', 'Dépenses', 'Solde']],
-                body: tableData,
-                theme: 'grid',
-                styles: { fontSize: 10 },
-                headStyles: { fillColor: [66, 133, 244] }
-            });
-
-            doc.save('rapport_financier.pdf');
+            doc.save('rapport.pdf');
         }
 
         function exportTransactionsPDF() {
@@ -1296,17 +1157,16 @@
             const doc = new jsPDF();
 
             doc.setFontSize(20);
-            doc.text('Historique des Transactions', 20, 30);
-            
+            doc.text('Historique Transactions', 20, 30);
             doc.setFontSize(12);
-            doc.text(`Date d'export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
+            doc.text(`Export: ${new Date().toLocaleDateString('fr-FR')}`, 20, 45);
 
-            const tableData = transactions.map(transaction => [
-                transaction.date,
-                transaction.description,
-                transaction.category,
-                transaction.type === 'recette' ? 'Recette' : 'Dépense',
-                `${transaction.amount.toFixed(2)} DT`
+            const tableData = transactions.map(t => [
+                t.date,
+                t.description,
+                t.category,
+                t.type === 'recette' ? 'Recette' : 'Dépense',
+                `${t.amount.toFixed(2)} DT`
             ]);
 
             doc.autoTable({
@@ -1320,54 +1180,6 @@
 
             doc.save('transactions.pdf');
         }
-
-        // Surveillance du statut Firebase
-        function showFirebaseStatus() {
-            let status = `=== STATUT FIREBASE ===\n\n`;
-            status += `Connecté: ${isFirebaseConnected ? 'OUI' : 'NON'}\n`;
-            status += `Project ID: ${firebaseConfig.projectId || 'Non configuré'}\n`;
-            status += `Transactions: ${transactions.length}\n`;
-            status += `Membres: ${members.length}\n`;
-            
-            if (isFirebaseConnected) {
-                status += `Base de données: Firestore\n`;
-                status += `Collections: transactions, members\n`;
-            } else {
-                status += `Mode: Données locales uniquement\n`;
-            }
-            
-            const hasLocalBackup = localStorage.getItem('treasuryData') ? 'OUI' : 'NON';
-            status += `Sauvegarde locale: ${hasLocalBackup}\n`;
-            
-            alert(status);
-        }
-
-        // Auto-retry Firebase en cas de déconnexion réseau
-        function setupNetworkMonitoring() {
-            if ('navigator' in window && 'onLine' in navigator) {
-                window.addEventListener('online', () => {
-                    console.log('Connexion réseau restaurée');
-                    if (firebaseConfig.projectId && !isFirebaseConnected) {
-                        setTimeout(() => {
-                            initFirebase();
-                        }, 2000);
-                    }
-                });
-                
-                window.addEventListener('offline', () => {
-                    console.log('Connexion réseau perdue');
-                    updateSyncStatus('error', 'Mode hors ligne');
-                });
-            }
-        }
-
-        // Démarrer l'application
-        function init() {
-            setCurrentDate();
-            setupNetworkMonitoring();
-            initFirebase();
-        }
-        init();
     </script>
 </body>
 </html>
