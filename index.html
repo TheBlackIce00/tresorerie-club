@@ -978,32 +978,51 @@
         }
 
         async function togglePayment(memberId) {
-            const member = members.find(m => m.id === memberId);
-            if (!member || !currentUser) return;
+    const member = members.find(m => m.id === memberId);
+    if (!member || !currentUser) return;
+    
+    try {
+        if (!member.paid) {
+            // ✅ MARQUER PAYÉ : AJOUTER LA TRANSACTION
             
-            try {
-                if (!member.paid) {
-                    await db.collection('transactions').add({
-                        userId: currentUser.uid,
-                        type: 'recette',
-                        description: `Cotisation - ${member.firstName} ${member.lastName}`,
-                        amount: member.amount,
-                        category: 'Cotisations',
-                        date: new Date().toISOString().split('T')[0],
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        createdBy: currentUser.email
-                    });
-                }
-                
-                await db.collection('members').doc(memberId).update({
-                    paid: !member.paid
-                });
-                
-            } catch (error) {
-                console.error('Erreur toggle:', error);
-                alert('Erreur lors de la mise à jour');
+            // 1. Ajouter la transaction de cotisation (et récupérer l'ID)
+            const newTransactionRef = await db.collection('transactions').add({
+                userId: currentUser.uid,
+                type: 'recette',
+                description: `Cotisation - ${member.firstName} ${member.lastName}`,
+                amount: member.amount,
+                category: 'Cotisations',
+                date: new Date().toISOString().split('T')[0],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: currentUser.email
+            });
+            
+            // 2. Mettre à jour le membre avec le statut ET l'ID de la transaction
+            await db.collection('members').doc(memberId).update({
+                paid: true,
+                transactionId: newTransactionRef.id // 💡 NOUVEAU: Stocker l'ID de transaction
+            });
+            
+        } else {
+            // ❌ MARQUER NON PAYÉ : SUPPRIMER LA TRANSACTION PRÉCÉDENTE
+            
+            // Vérifier si une transaction est associée et la supprimer
+            if (member.transactionId) {
+                await db.collection('transactions').doc(member.transactionId).delete();
             }
+            
+            // Mettre à jour le statut du membre et retirer l'ID de transaction
+            await db.collection('members').doc(memberId).update({
+                paid: false,
+                transactionId: firebase.firestore.FieldValue.delete() // Retirer le champ
+            });
         }
+        
+    } catch (error) {
+        console.error('Erreur toggle:', error);
+        alert('Erreur lors de la mise à jour');
+    }
+}
 
         async function markAllPaid() {
             if (!currentUser || !confirm('Marquer tous les membres comme payés ?')) return;
